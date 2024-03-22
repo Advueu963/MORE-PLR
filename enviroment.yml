@@ -1,4 +1,4 @@
-name: viktorTest
+name: XXXX
 channels:
   - defaults
   - conda-forge
@@ -292,4 +292,4 @@ dependencies:
   - zstd=1.5.5=hd90d995_0
   - pip:
       - scikit-lr==0.3.dev0
-prefix: /Users/santothies/miniforge3/envs/viktorTest
+prefix: /Users/XXXX/miniforge3/envs/XXXX
