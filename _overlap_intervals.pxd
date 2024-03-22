@@ -1,3 +1,8 @@
+"""
+    Header file of _overlaps_intervals.pyx containing general definitions.
+
+"""
+
 # cython: language_level=3
 # cython: cdivision=True
 # cython: boundscheck=False

@@ -15,12 +15,18 @@ from MORE_models import PLR_RegressorChainInterval, PLR_RegressorChain, PLR_Regr
     PLR_RandomForestRegressor, PLR_LinearRegressorCalibrater, PLR_MLPCalibrater, PLR_MultiOutputRegressor
 from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
 from sklr.pairwise import PairwisePartialLabelRanker
-from utils_chain import model_evaluation_missingLabels, model_scores_Pipeline
+from utils_results import model_evaluation_missingLabels, model_scores_Pipeline
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from MORE_models import PLR_RegressorChainInterval, PLR_RegressorChain, PLR_RegressorChainConformel, \
     PLR_RandomForestRegressor, PLR_LinearRegressorCalibrater, PLR_GaussianProcessRegressor
 
 import os
+
+
+"""
+    Script to produce Political Data results for label ranking with missing labels
+"""
+
 if __name__ == "__main__":
     random_state = 0
     n_jobs = int(os.environ['SLURM_CPUS_PER_TASK'])  # important that this equals the number of cpus on the linux cluster batch job

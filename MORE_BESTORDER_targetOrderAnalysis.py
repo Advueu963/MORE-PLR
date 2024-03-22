@@ -14,8 +14,6 @@ from sklearn.neighbors import KNeighborsRegressor
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-kernel = DotProduct() + WhiteKernel()
-
 import utils
 data_id = 42851
 # Authorship: 42834

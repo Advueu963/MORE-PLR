@@ -5,11 +5,14 @@ from sklr.pairwise import PairwisePartialLabelRanker
 from utils import build_plottable_evaluationDataFrame, plot_evaluation_data
 from MORE_models import PLR_RegressorChainInterval, PLR_RegressorChain, \
     PLR_RandomForestRegressor, PLR_LinearRegressorCalibrater, PLR_MultiOutputRegressor
-import utils_chain
+import utils_results
 from dataLinks import name_to_data_plr
 
 import os
 
+"""
+    Script to produce RFR results for partial label ranking
+"""
 
 if __name__ == '__main__':
     n_jobs = int(os.environ['SLURM_CPUS_PER_TASK'])  # important that this equals the number of cpus on the linux cluster batch job

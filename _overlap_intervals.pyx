@@ -1,3 +1,7 @@
+"""
+    This file contains a Cython DFS implementation to find overlapping intervals.
+"""
+
 # cython: language_level=3
 # cython: cdivision=True
 # cython: boundscheck=False
@@ -125,7 +129,6 @@ cdef void build_ranking(DTYPE_t **non_overlap_groups,
     cdef DTYPE_t min_val_otherGroup
     cdef np.int64_t how_often_bigger
     cdef np.int64_t unique_buckets = 0  # save amount of unique buckets to add elements to correct position in ranking
-    #printf("ASCEDNING RANK POSITION PyMem_Malloc\n")
     cdef np.int64_t *descending_rank_position = <np.int64_t *> malloc(sizeof(np.int64_t) * n_classes)
 
     if descending_rank_position is NULL:
@@ -146,10 +149,11 @@ cdef void build_ranking(DTYPE_t **non_overlap_groups,
                     # min_val_group is ranked before min_val_otherGroup
                     how_often_bigger = how_often_bigger + 1
             descending_rank_position[group] = how_often_bigger
-    #printf("ENDED ASCENDING RANK POSITION\n")
+
     cdef np.int64_t bucket_rank
     cdef np.int64_t elem
     cdef np.int64_t interval_num
+
     # insert in y the rankings of the classes
     for bucket in range(n_classes):
         # iterate over each ascending_rank_position
@@ -161,7 +165,7 @@ cdef void build_ranking(DTYPE_t **non_overlap_groups,
                 interval_num =  c_lround(non_overlap_groups[bucket][0])
                 #printf("interval_num: %d vs original: %f\n",interval_num, non_overlap_groups[bucket][0])
                 if elem >= 0:
-                    consensus[elem] = bucket_rank
+                    consensus[elem] = bucket_rank # !!! actually filling the prediction vector !!!
     #printf("STARTING FREE of ranking build\n")
     free(descending_rank_position)
     #printf("ASCENDING FREE DONE\n")
@@ -171,13 +175,12 @@ cdef void build_ranking(DTYPE_t **non_overlap_groups,
 cdef void _get_overlaps(DTYPE_t_2D intervals,
                         np.int64_t n_classes,
                         DTYPE_t_1D consensus) nogil:
-    # assume intervals[k,0] < intervals[k,1]
-    #printf("FIRST 2D Pointer\n")
+    # Allocate memory for  adjacency matrix called overlaps
     cdef DTYPE_t **overlaps = get_overlaps_array(n_classes,n_classes,0)
     if overlaps is NULL:
-        #printf("ERROR: NULL pointer at overlaps")
         return
-    #printf("ENDED 2D Pointer\n")
+
+    # bunch of variable declarations
     cdef DTYPE_t **non_overlap_groups
     cdef np.uint8_t *visited = <np.uint8_t*> malloc(sizeof(np.uint8_t)*n_classes)
     cdef float current_class_lower
@@ -187,6 +190,7 @@ cdef void _get_overlaps(DTYPE_t_2D intervals,
     for n in range(n_classes):
         visited[n] = 0
 
+    # Fill the matrix
     for i in range(n_classes):
         current_class_lower = intervals[i][0]
         current_class_upper = intervals[i][1]
@@ -197,24 +201,18 @@ cdef void _get_overlaps(DTYPE_t_2D intervals,
             other_class_upper = intervals[j][1]
             #https://stackoverflow.com/questions/3269434/whats-the-most-efficient-way-to-test-if-two-ranges-overlap
             if current_class_lower <= other_class_upper and other_class_lower <= current_class_upper:
-                overlaps[i][j] = min(current_class_lower,other_class_lower) # the new overlapping interval has a new minimal value
+                overlaps[i][j] = min(current_class_lower,other_class_lower) # the value indicating that i and j overlaps is the minimal value of the "new" bigger interval
 
-    #printf("Overlaps Adjacency Matrix : \n")
-    #print_overlaps_array(overlaps,n_classes,n_classes)
-    #printf("----\n")
-
-    # Find connected elements
-    #printf("STARTED DFS\n")
+    # find all overlapping intervals and distinguish them in groups
+    # the groups are the rows and the columns the indices of the intervals belonging to the group
+    # -1 indicates not a group / not a member
     non_overlap_groups = dfs(overlaps,n_classes,visited,0)
-    #print_overlaps_array(non_overlap_groups,n_classes+1,n_classes+1)
 
-    # readjust non_overlaps_groups so that the representing value is the mean of the interval
+    # Get the mean prediction of the groups interval as new representative of the groups
     cdef int group_member
     cdef float current_group_lower
     cdef float current_group_upper
-
     for group_number in range(n_classes): # last group is memory overhead
-
         # Initialize the group lower and upper values
         group_member = <np.int8_t> non_overlap_groups[group_number][1]
         if group_member >= 0: # this is a group with at least 1 valid member
@@ -230,12 +228,13 @@ cdef void _get_overlaps(DTYPE_t_2D intervals,
             # update the representing value of the group
             non_overlap_groups[group_number][0] = (current_group_lower + current_group_upper) / 2
 
-    #print_overlaps_array(non_overlap_groups,n_classes+1,n_classes+1)
-
     free(visited)
     #printf("ENDED DFS\n")
 
+    # Now thake these new groups in bring them in the api dense ranking position vector format
     build_ranking(non_overlap_groups=non_overlap_groups,n_classes=n_classes,consensus=consensus)
+
+    # clean up
     free_overlaps_array(overlaps,n_classes)
     free_overlaps_array(non_overlap_groups,n_classes+1)
 

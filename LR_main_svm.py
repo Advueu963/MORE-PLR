@@ -2,7 +2,7 @@ from sklearn.ensemble import AdaBoostRegressor
 from sklr.pairwise import PairwisePartialLabelRanker
 from sklearn.svm import SVR, SVC
 from utils import build_plottable_evaluationDataFrame,plot_evaluation_data
-from utils_chain import model_evaluation, model_scores
+from utils_results import model_evaluation, model_scores
 from MORE_models import PLR_RegressorChain, PLR_MultiOutputRegressor, PLR_RegressorChainInterval
 
 random_state = 0
@@ -10,21 +10,11 @@ data_id = 42855
 from dataLinks import name_to_data_lr
 import os
 
-name_to_data_lr = {
-        'LR-AUTHORSHIP': 42834,
-        "LR-GLASS": 42847,
-        'LR-IRIS': 42851,
-        "LR-LIBRAS": 45736,
-        "LR-PENDIGITS": 42856,
-        "LR-SEGMENT": 42859,
-        "LR-VEHICLE": 42863,
-        "LR-VOWEL": 42865,
-        "LR-WINE": 42867,
-        "LR-YEAST": 45737,
-        # Real Szenario Dataset
-        "LR-REAL-MOVIES": 45735,
 
-    }
+"""
+    Script to produce SVM results for label ranking
+"""
+
 
 
 if __name__ == '__main__':

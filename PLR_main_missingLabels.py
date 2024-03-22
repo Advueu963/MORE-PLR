@@ -5,11 +5,14 @@ from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
 from sklr.pairwise import PairwisePartialLabelRanker
 from utils import build_plottable_evaluationDataFrame_missingLabels
 from MORE_models import PLR_RandomForestRegressor, PLR_MultiOutputRegressor, PLR_RegressorChain, PLR_RegressorChainInterval
-import utils_chain
+import utils_results
 from dataLinks import name_to_data_plr
 import sys
 import os
 
+"""
+    Script to produce partial label ranking results for missing labels
+"""
 
 if __name__ == '__main__':
     n_jobs = int(os.environ['SLURM_CPUS_PER_TASK'])  # important that this equals the number of cpus on the linux cluster batch job

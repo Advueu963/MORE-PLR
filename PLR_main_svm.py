@@ -2,7 +2,7 @@ from sklearn.ensemble import AdaBoostRegressor
 from sklr.pairwise import PairwisePartialLabelRanker
 from sklearn.svm import SVR, SVC
 from utils import build_plottable_evaluationDataFrame, plot_evaluation_data
-from utils_chain import model_evaluation, model_scores
+from utils_results import model_evaluation, model_scores
 from MORE_models import PLR_RegressorChain, PLR_MultiOutputRegressor, PLR_RegressorChainInterval
 import os
 
@@ -10,25 +10,10 @@ random_state = 0
 data_id = 42855
 from dataLinks import name_to_data_plr
 
-name_to_data_plr = {
-        "PLR-AUTHORSHIP":42835,
-        "PLR-BLOCKS":42836,
-        "PLR-BREAST":42838,
-        'PLR-ECOLI': 42844,
-        "PLR-GLASS":42848,
-        "PLR-IRIS":42871,
-        'PLR-LIBRAS': 42855,
-        "PLR-PENDIGITS":42857,
-        "PLR-SATIMAGE":42858,
-        "PLR-SEGMENT":42860,
-        "PLR-VEHICLE":42864,
-        "PLR-VOWEL":42866,
-        'PLR-WINE': 42872,
-        "PLR-YEAST":42870,
-        # REAL DATA SETS
-        "PLR-REAL-ALGAE":45755,
-        "PLR-REAL-MOVIES":45738
-}
+"""
+    Script to produce SVM results for partial label ranking
+"""
+
 
 if __name__ == '__main__':
     n_jobs = int(os.environ['SLURM_CPUS_PER_TASK'])  # important that this equals the number of cpus on the linux cluster batch job

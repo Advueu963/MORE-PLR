@@ -24,6 +24,10 @@ from utils import transform_arrayToAPI, optimism_data_approach, pessimism_data_a
 from _overlap_intervals import test
 import xgboost as xgb
 
+"""
+    This file contains all evaluated Models of the paper and some additional model variants.
+
+"""
 
 def _check_method_params(X, params, indices=None):
     #source: https://github.com/scikit-learn/scikit-learn/blob/f07e0138bfee41cd2c0a5d0251dc3fe03e6e1084/sklearn/utils/validation.py#L2114

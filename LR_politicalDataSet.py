@@ -15,12 +15,17 @@ from MORE_models import PLR_RegressorChainInterval, PLR_RegressorChain, PLR_Regr
     PLR_RandomForestRegressor, PLR_LinearRegressorCalibrater, PLR_MLPCalibrater, PLR_MultiOutputRegressor
 from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
 from sklr.pairwise import PairwisePartialLabelRanker
-from utils_chain import model_evaluation, model_scores_Pipeline
+from utils_results import model_evaluation, model_scores_Pipeline
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from MORE_models import PLR_RegressorChainInterval, PLR_RegressorChain, PLR_RegressorChainConformel, \
     PLR_RandomForestRegressor, PLR_LinearRegressorCalibrater, PLR_GaussianProcessRegressor
 from utils import plot_evaluation_data
 import os
+
+"""
+    Script to produce Political Data results for label ranking
+"""
+
 if __name__ == "__main__":
     random_state = 0
     n_jobs = int(os.environ['SLURM_CPUS_PER_TASK'])  # important that this equals the number of cpus on the linux cluster batch job
@@ -159,7 +164,7 @@ if __name__ == "__main__":
 
     for file in data_files:
         #Read Data
-        dataFrame = pd.read_csv(f"../data/{file}.csv")
+        dataFrame = pd.read_csv(f"data/{file}.csv")
 
         # Split in Features and Targets
         X, Y = dataFrame.iloc[:, :-6], dataFrame.iloc[:, -6:]
@@ -286,7 +291,7 @@ if __name__ == "__main__":
                         algo=model_names[index_models])
 
     plotData = pd.DataFrame(plotData)
-    plotData.to_csv("../data/MultiRegression/LR_politicalEvaluation.csv")
+    plotData.to_csv("data/MultiRegression/LR_politicalEvaluation.csv")
     #file_name = f"benchMarkPolitical_MORE-vs-JC"
     #plot_evaluation_data(plotData,file_name,data_files)
 

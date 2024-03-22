@@ -1,3 +1,7 @@
+"""
+    File containing general utils that have different purposes, but mainly focus around building dataframes or creating correct api formats.
+"""
+
 import math
 from time import perf_counter
 
@@ -9,6 +13,7 @@ import matplotlib.pyplot as plt
 
 
 def create_apiRanks(array):
+    # File to build dense ranking vectors. Example: (1,2,2,4) -> (1,2,2,3).
     min_val = np.min(array)
     if min_val < 0:
         array = array - min_val  # scale all values to be at least >= 0. Remark: this is just quick and dirty
@@ -87,7 +92,7 @@ def build_plottable_evaluationDataFrame(name_to_data, models, random_state,
             data['buckets_per_rank'].append(bucket_per_rank)
             data['algo'].append(algo)
 
-    # Options for JC data extraction
+    # Options for data extraction
     as_frame = False
     return_X_y = True
 
@@ -209,7 +214,7 @@ def build_plottable_evaluationDataFrame_missingLabels(name_to_data, models, rand
             data['algo'].append(algo)
             data['percentage'].append(percentage)
 
-    # Options for JC data extraction
+    # Options for data extraction
     as_frame = False
     return_X_y = True
 

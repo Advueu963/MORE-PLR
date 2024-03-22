@@ -5,7 +5,7 @@ from sklr.pairwise import PairwisePartialLabelRanker
 from utils import build_plottable_evaluationDataFrame, plot_evaluation_data
 from MORE_models import PLR_RegressorChainInterval, PLR_RegressorChain, PLR_RegressorChainConformel, \
     PLR_RandomForestRegressor, PLR_LinearRegressorCalibrater, PLR_MLPCalibrater, PLR_MultiOutputRegressor
-import utils_chain
+import utils_results
 from dataLinks import name_to_data_lr
 import os
 
@@ -61,6 +61,6 @@ if __name__ == '__main__':
                                              model_names=[model_name],
                                              model_score_function=utils_chain.model_scores)
 
-    df.to_csv(f"../data/MultiRegression/LR-DT/LR_{model_name}.csv")
+    df.to_csv(f"data/MultiRegression/LR-DT/LR_{model_name}.csv")
     #file_name = "benchMark_LR_CHAINS-vs-JC_DT"
     #plot_evaluation_data(df,file_name, list(name_to_data_lr.keys()))

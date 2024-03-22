@@ -5,30 +5,20 @@ from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
 from sklr.pairwise import PairwisePartialLabelRanker
 from utils import plot_evaluation_data, build_plottable_evaluationDataFrame_missingLabels
 from MORE_models import PLR_RandomForestRegressor, PLR_MultiOutputRegressor, PLR_RegressorChain, PLR_RegressorChainInterval
-import utils_chain
+import utils_results
 from dataLinks import name_to_data_lr
 import sys
 import os
 
-name_to_data_lr = {
-        'LR-AUTHORSHIP': 42834,
-        "LR-GLASS": 42847,
-        'LR-IRIS': 42851,
-        "LR-LIBRAS": 45736,
-        "LR-PENDIGITS": 42856,
-        "LR-SEGMENT": 42859,
-        "LR-VEHICLE": 42863,
-        "LR-VOWEL": 42865,
-        "LR-WINE": 42867,
-        "LR-YEAST": 45737,
-        # Real Szenario Dataset
-        "LR-REAL-MOVIES": 45735,
-
-    }
+"""
+    Script to produce the missing labels results for label rankings problems
+    
+"""
 
 if __name__ == '__main__':
-    n_jobs = int(os.environ['SLURM_CPUS_PER_TASK'])  # important that this equals the number of cpus on the linux cluster batch job
-    #number = int(os.environ["SLURM_ARRAY_TASK_ID"])
+    #n_jobs = int(os.environ['SLURM_CPUS_PER_TASK'])  # HPC configuration
+    n_jobs = -1
+    #number = int(os.environ["SLURM_ARRAY_TASK_ID"]) # HPC configuration
     
     random_state = 0
     percentages = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6]
@@ -123,4 +113,4 @@ if __name__ == '__main__':
                                              model_names=[model_name],
                                              model_score_function=utils_chain.model_scores)
 
-    df.to_csv(f"../data/MultiRegression/missingLabels/LR-{model_name}-{percentage}-NoLetter.csv")
+    df.to_csv(f"data/MultiRegression/missingLabels/LR-{model_name}-{percentage}-NoLetter.csv")

@@ -3,7 +3,7 @@ from sklearn.ensemble import RandomForestRegressor
 from sklr.pairwise import PairwisePartialLabelRanker
 
 from utils import build_plottable_evaluationDataFrame,plot_evaluation_data
-from utils_chain import model_evaluation, model_scores
+from utils_results import model_evaluation, model_scores
 from MORE_models import PLR_RandomForestRegressor
 random_state = 0
 from dataLinks import name_to_data
