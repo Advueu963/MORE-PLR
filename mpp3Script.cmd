@@ -14,7 +14,7 @@
 
 module load slurm_setup
 source ~/.conda_init
-conda activate viktor
+conda activate <ENVIROMENT>
 export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
 export NUMEXPR_MAX_THREADS=$SLURM_CPUS_PER_TASK
 
