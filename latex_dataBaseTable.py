@@ -21,7 +21,7 @@ if __name__ == "__main__":
             " & ".join([data_name, str(n_samples), str(n_features), str(n_targets),str(n_rankings), str(round(target_mean_bucketSize,3))]) + " \\\\ "
         )
     for file in ["PLR-REAL-Political","LR-REAL-Political"]:
-        dataFrame = pd.read_csv(f"../data/{file}.csv")
+        dataFrame = pd.read_csv(f"data/{file}.csv")
         # Split in Features and Targets
         X, Y = dataFrame.iloc[:, :-6], dataFrame.iloc[:, -6:]
         # Extract the numpy arrays

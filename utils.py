@@ -159,7 +159,7 @@ def build_plottable_evaluationDataFrame_csvData(name_to_data, models, random_sta
 
     for i in range(len(csv_file_name)):
         # Read Data
-        dataFrame = pd.read_csv(f"../data/{csv_file_name[i]}.csv")
+        dataFrame = pd.read_csv(f"data/{csv_file_name[i]}.csv")
 
         # Split in Features and Targets
         X, Y = dataFrame.iloc[:, :-6], dataFrame.iloc[:, -6:]
@@ -262,7 +262,7 @@ def plot_evaluation_data(dataframe: pd.DataFrame,fileName, xticks):
     g.add_legend()
     g.tight_layout()
     plt.show()
-    g.figure.savefig(f"../data/MultiRegression/{fileName}.png")
+    g.figure.savefig(f"data/MultiRegression/{fileName}.png")
 
 """
 Missing labels Utils

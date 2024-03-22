@@ -66,7 +66,7 @@ def print_timeRanks(dataFrame, n_datasets, datasets, algorithms):
 
 
 if __name__ == "__main__":
-    dataFrame = pd.read_csv("../data/MultiRegression/LR_and_PLR.csv",index_col=0)
+    dataFrame = pd.read_csv("data/MultiRegression/LR_and_PLR.csv",index_col=0)
 
     n_datasets, datasets = len(dataFrame["data"].unique()), dataFrame["data"].unique()
     n_algorithms, algorithms = len(dataFrame["algo"].unique()), dataFrame["algo"].unique()

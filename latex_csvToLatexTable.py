@@ -65,7 +65,7 @@ def print_latexPredictionScore(dataFrame, n_rows, datasets, n_columns, algorithm
 
 
 if __name__ == '__main__':
-    dataFrame  = pd.read_csv("../data/MultiRegression/PLRs.csv", index_col=0)
+    dataFrame  = pd.read_csv("data/MultiRegression/PLRs.csv", index_col=0)
     n_rows,datasets = len(dataFrame["data"].unique()), dataFrame["data"].unique()
     n_columns,algorithms = len(dataFrame["algo"].unique()), dataFrame["algo"].unique()
 
