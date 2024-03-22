@@ -8,6 +8,6 @@ __latex-...__ files are auxiliary files for writing the paper. \
 __MORE_models__ contains all models proposed in the Paper and some more. \
 __mpp3Script.cmd__ is the SLURM Job processing script that was used to run the experiments. 
 The 96 GB mentioned in the paper was automatically controlled through the HPC. \
-__data/__ contains all the files for the results. All results are saved to this file \
+__data/__ contains all the files for the results. All results are saved to this file (small remark: in the data JC stands for RPC)\
 __scikit-lr/__ contains the pairwise-reduction methods from "Pairwise learning for the partial label ranking problem"
 To install run "pip install --verbose --no-build-isolation --editable .; python setup.py build_ext --inplace" in the scikit-lr folder. 
