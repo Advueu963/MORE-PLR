@@ -1,0 +1,2 @@
+,data,tau_x_score,prediction_time,buckets_per_rank,algo,percentage
+0,LR-LETTER,0.9486615384615383,41.41897029246381,18.667,SVC-JC,0.6

@@ -1,0 +1,2 @@
+,data,tau_x_score,prediction_time,buckets_per_rank,algo,percentage
+0,LR-LETTER,0.8065953846153845,61.26554933816413,17.2955,CHAIN-SVR,0.5
