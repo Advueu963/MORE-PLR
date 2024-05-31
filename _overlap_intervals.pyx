@@ -199,7 +199,7 @@ cdef void _get_overlaps(DTYPE_t_2D intervals,
             # iterate over each other class
             other_class_lower = intervals[j][0]
             other_class_upper = intervals[j][1]
-            #https://stackoverflow.com/questions/3269434/whats-the-most-efficient-way-to-test-if-two-ranges-overlap
+            #https://stackoverflow.com/questions/3269434/whats-the-most-efficient-way-to-get_overlaps-if-two-ranges-overlap
             if current_class_lower <= other_class_upper and other_class_lower <= current_class_upper:
                 overlaps[i][j] = min(current_class_lower,other_class_lower) # the value indicating that i and j overlaps is the minimal value of the "new" bigger interval
 
@@ -239,5 +239,5 @@ cdef void _get_overlaps(DTYPE_t_2D intervals,
     free_overlaps_array(non_overlap_groups,n_classes+1)
 
 
-cpdef test(intervals,n_classes,consensus):
+cpdef get_overlaps(intervals,n_classes,consensus):
     _get_overlaps(intervals,n_classes, consensus)

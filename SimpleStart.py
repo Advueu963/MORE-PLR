@@ -4,12 +4,13 @@
 """
 
 from sklearn.model_selection import train_test_split
-
-from MORE_models import PLR_MultiOutputRegressor
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.datasets import fetch_openml
-from dataLinks import name_to_data
+
 from sklr.metrics import tau_x_score
+
+from MORE_models import PLR_MultiOutputRegressor
+from globalVariables import name_to_data
 
 
 regr_model = PLR_MultiOutputRegressor(
