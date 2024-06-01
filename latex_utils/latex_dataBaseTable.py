@@ -2,8 +2,8 @@ import pandas as pd
 import numpy as np
 from sklearn.datasets import fetch_openml
 
-from utils import mean_bucketSize, amount_rankings
-from globalVariables import name_to_data
+from MORE.utils import mean_bucketSize, amount_rankings
+from MORE.constants import name_to_data
 if __name__ == "__main__":
 
     as_frame = False

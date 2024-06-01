@@ -9,8 +9,8 @@ from sklearn.datasets import fetch_openml
 
 from sklr.metrics import tau_x_score
 
-from MORE_models import PLR_MultiOutputRegressor
-from globalVariables import name_to_data
+from MORE.MORE_models import PLR_MultiOutputRegressor
+from MORE.constants import name_to_data
 
 
 regr_model = PLR_MultiOutputRegressor(

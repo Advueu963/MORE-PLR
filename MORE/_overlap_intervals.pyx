@@ -8,7 +8,7 @@
 # cython: wraparound=False
 import numpy as np
 cimport numpy as np
-from _overlap_intervals cimport DTYPE_t,DTYPE_t_1D,DTYPE_t_2D
+from MORE._overlap_intervals cimport DTYPE_t,DTYPE_t_1D,DTYPE_t_2D
 from libc.stdio cimport printf
 from libc.stdlib cimport malloc,free
 from libc.math cimport lround as c_lround

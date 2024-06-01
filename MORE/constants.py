@@ -1,3 +1,10 @@
+from pathlib import Path
+"""Output directory constants
+"""    
+ROOT_DIR = Path(__file__).parent.parent
+DATA_DIR = ROOT_DIR / "data/MultiRegression"
+
+
 """Global model names 
 """
 regr_name_singleTarget_rf = "ST-RF"

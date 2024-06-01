@@ -4,18 +4,18 @@ from sklearn.ensemble import RandomForestRegressor
 from sklr.pairwise import PairwisePartialLabelRanker
 
 # internal
-from MORE_models import (
+from MORE.MORE_models import (
     PLR_RandomForestRegressor,
     PLR_MultiOutputRegressor,
     PLR_RegressorChain,
     PLR_RegressorChainInterval,
 )
-from utils import (
+from MORE.utils import (
     build_plottable_evaluationDataFrame_missingLabels,
     model_evaluation_missingLabels,
     model_scores,
 )
-from globalVariables import *
+from MORE.constants import *
 import os
 
 """
@@ -26,6 +26,8 @@ if __name__ == "__main__":
     n_jobs = -1
     # n_jobs = int(os.environ['SLURM_CPUS_PER_TASK'])  # HPC configuration
     # number = int(os.environ["SLURM_ARRAY_TASK_ID"]) # HPC configuration
+
+    DATA_FOLDER = "missingLabels"
 
     random_state = 0
     percentages = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6]
@@ -80,6 +82,4 @@ if __name__ == "__main__":
         model_score_function=model_scores,
     )
 
-    df.to_csv(
-        f"data/MultiRegression/missingLabels/LR-{model_name}-{percentage}-NoLetter.csv"
-    )
+    df.to_csv(DATA_DIR / DATA_FOLDER / f"LR-{model_name}-{percentage}-NoLetter.csv")

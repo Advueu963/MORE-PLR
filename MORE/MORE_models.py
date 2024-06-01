@@ -24,7 +24,7 @@ import threading
 from joblib import effective_n_jobs
 
 # code intern
-from utils import (
+from MORE.utils import (
     transform_arrayToAPI,
     optimism_data_approach,
     pessimism_data_approach,
@@ -95,7 +95,7 @@ def _accumulate_prediction(predict, X, out, lock):
                 out[i] += prediction[i]
 
 
-def findBestOrder(X, Y):
+def find_chain_order(X, Y):
     Z = np.append(X, Y, axis=1)
     correlationMatrix = pd.DataFrame(
         Z,
@@ -363,7 +363,8 @@ class PLR_RegressorChain(RegressorChain):
         estimator: base estimator to be used for each target
         random_state: number of the random generator to have reproducible results
         order: The order in which the target is arranged.
-            None == Will use the `findBestOrder` function to determine the order
+            None == Will use the `find_chain_order
+        ` function to determine the order
             [int] == list of target indices determining the order.
         missing_label_strategy: determinies how to handle possible missing labels in the training set.
             None == Dont do anything --> Assumes no missing labels in training set
@@ -392,7 +393,7 @@ class PLR_RegressorChain(RegressorChain):
             non_missing_ranks = np.any(Y >= 0, axis=1)
             X, Y = X[non_missing_ranks], Y[non_missing_ranks]
 
-        self.order = findBestOrder(X, Y)
+        self.order = find_chain_order(X, Y)
 
         super(RegressorChain, self).fit(X, Y)
 
@@ -415,7 +416,8 @@ class PLR_RegressorChainInterval(PLR_RegressorChain):
         estimator: base estimator to be used for each target. !!!! Must be an ensemble of any kind !!!!
         random_state: number of the random generator to have reproducible results
         order: The order in which the target is arranged.
-            None == Will use the `findBestOrder` function to determine the order \n
+            None == Will use the `find_chain_order
+        ` function to determine the order \n
             [int] == list of target indices determining the order.
         missing_label_strategy: determinies how to handle possible missing labels in the training set.
             None == Dont do anything --> Assumes no missing labels in training set \n
@@ -506,44 +508,10 @@ class PLR_RegressorChainInterval(PLR_RegressorChain):
         n_samples, n_classes, _ = Y_pred_int.shape
         consensus = np.zeros(shape=(n_samples, n_classes))  # N_samples, N_outputs
         for i in range(consensus.shape[0]):
-            test(Y_pred_int[i], n_classes, consensus[i])
+            get_overlaps(Y_pred_int[i], n_classes, consensus[i])
 
         erg = transform_arrayToAPI(consensus)
         # print("Ranking Build Time: ", c-b)
         # print("Transformation Time: ", d-c)
 
         return erg
-
-    def __init__(
-        self, kernel, random_state, n_restarts_optimizer, missing_label_strategy=None
-    ):
-        self.kernel = kernel
-        self.missing_label_strategy = missing_label_strategy
-        super().__init__(
-            kernel=kernel,
-            normalize_y=True,
-            random_state=random_state,
-            copy_X_train=True,
-            n_restarts_optimizer=n_restarts_optimizer,
-        )
-
-    def fit(self, X, y):
-        if self.missing_label_strategy == "optimism":
-            X, y = optimism_data_approach(X, y)
-
-        elif self.missing_label_strategy == "pessimism":
-            X, y = pessimism_data_approach(X, y)
-
-        elif self.missing_label_strategy == "balanced":
-            X, y = optimism_pessimism_data_approach(X, y)
-
-        elif self.missing_label_strategy == "drop_individuals":
-            non_missing_ranks = np.any(y >= 0, axis=1)
-            X, y = X[non_missing_ranks], y[non_missing_ranks]
-
-        super().fit(X, y)
-
-    def predict(self, X, return_std=False, return_cov=False):
-        Y_pred = super().predict(X, return_std, return_cov)
-
-        return transform_arrayToAPI(np.round(Y_pred))

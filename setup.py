@@ -9,7 +9,7 @@ ext_options = {"compiler_directives": {"profile": True,
 extensions = [
 Extension(
             name="_overlap_intervals",
-            sources=["_overlap_intervals.pyx"],
+            sources=["MORE/_overlap_intervals.pyx"],
             include_dirs=[np.get_include()],
             extra_compile_args=["-O0","-std=c99"],
             extra_link_args=["-std=c99"],
