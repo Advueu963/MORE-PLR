@@ -6,3 +6,4 @@ build/
 .idea/
 __pycache__
 MORE/__pycache__
+cython_debug/
