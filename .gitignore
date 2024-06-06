@@ -4,3 +4,5 @@
 *.so
 build/
 .idea/
+__pycache__
+MORE/__pycache__
