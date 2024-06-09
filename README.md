@@ -15,5 +15,5 @@ The scripts used for the experiments can be found in *MORE/experiments* \
 # Cite
 TBA
 
-# Kontakt
+# Contact
 TBA
