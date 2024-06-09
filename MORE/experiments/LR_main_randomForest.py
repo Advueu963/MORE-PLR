@@ -1,6 +1,3 @@
-import sys
-print(sys.path)
-
 # external
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.ensemble import RandomForestRegressor
@@ -19,26 +16,23 @@ from MORE.utils import (
     model_scores,
 )
 from MORE.constants import *
-
+import os
 
 """
     Script to produce RandomForstRegressor results applied to the label ranking datasets
 """
 
-name_to_data_lr = {
-    "LR-IRIS": 42851,
-}
-
 
 if __name__ == "__main__":
-
     n_jobs = -1
-    # n_jobs = int(os.environ["SLURM_CPUS_PER_TASK"])  # HPC Configuration
+    #n_jobs = int(os.environ["SLURM_CPUS_PER_TASK"])  # HPC Configuration
     random_state = 0
 
     DATA_FOLDER = "LR-RFR"
 
-    estimator = RandomForestClassifier(n_estimators=100, random_state=random_state)
+    estimator = RandomForestClassifier(
+        n_estimators=100, random_state=random_state
+    )
     clas_model_randomForest = PairwisePartialLabelRanker(estimator, n_jobs=n_jobs)
 
     regr_estimator = RandomForestRegressor(

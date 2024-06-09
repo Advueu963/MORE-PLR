@@ -13,11 +13,7 @@ import pandas as pd
 
 # intern
 from MORE.MORE_models import (
-    PLR_RegressorChainInterval,
-    PLR_RegressorChain,
-    PLR_RandomForestRegressor,
-    PLR_LinearRegressorCalibrater,
-    PLR_MultiOutputRegressor,
+    PLR_RegressorChainInterval
 )
 from MORE.utils import model_evaluation, model_scores_Pipeline
 import os
@@ -32,50 +28,29 @@ if __name__ == "__main__":
     random_state = 0
 
     n_jobs = -1
+    number = 0
+
     #n_jobs = int(os.environ["SLURM_CPUS_PER_TASK"])  # HPC Configuration
+    #number = int(os.environ["SLURM_ARRAY_TASK_ID"]) # HPC configuration
+
+
 
     data_files = ["PLR-REAL-Political"]
+    
+    DATA_FOLDER = "PLR-sensivity"
+    
+    coverages = [0, 1, 2, 3]
+    coverage = coverages[number]
 
     random_state = 0
-
-    ##### State of the art ######
-    estimator = RandomForestClassifier(
-        n_estimators=100, n_jobs=n_jobs, random_state=random_state
-    )
-    clas_model_randomForest = PairwisePartialLabelRanker(estimator, n_jobs=n_jobs)
-
-    #### Single Target #####
-    regr_estimator = RandomForestRegressor(random_state=random_state)
-    regr_model_singleTarget_RF = PLR_MultiOutputRegressor(
-        estimator=regr_estimator, n_jobs=n_jobs
-    )
-
-    ##### RFR #####
-    regr_model_mort = PLR_RandomForestRegressor(
-        random_state=random_state, n_jobs=n_jobs
-    )
 
     regr_estimator = RandomForestRegressor(
         n_estimators=100, n_jobs=n_jobs, random_state=random_state
     )
     regr_model_interval = PLR_RegressorChainInterval(
-        estimator=regr_estimator, order=None, random_state=random_state
+        estimator=regr_estimator, order=None, random_state=random_state,
+        q=coverage
     )
-
-    regr_estimator = RandomForestRegressor(
-        n_estimators=100, n_jobs=n_jobs, random_state=random_state
-    )
-    regr_model_rounding_rf = PLR_RegressorChain(
-        estimator=regr_estimator, order=None, random_state=random_state
-    )
-
-    regr_estimator = RandomForestRegressor(
-        n_estimators=100, n_jobs=n_jobs, random_state=random_state
-    )
-    regr_method_calibration_rf = PLR_LinearRegressorCalibrater(
-        estimator=regr_estimator, random_state=0
-    )
-
     plotData = {
         "data": [],
         "tau_x_score": [],
@@ -84,11 +59,7 @@ if __name__ == "__main__":
         "algo": [],
     }
     model_names = [
-        regr_name_interval_rf,
-        regr_name_rounding_rf,
-        regr_name_singleTarget_rf,
-        regr_name_mort,
-        clas_name_randomForest,
+        regr_name_interval_rf
     ]
 
     def add_to_data(data_name, score, time, bucket_per_rank, algo):
@@ -165,18 +136,6 @@ if __name__ == "__main__":
         )
 
         ############ Random Forest Base Estimator##############
-
-        # MORT
-        mort_Pipeline = Pipeline(
-            steps=[("preprocessor", preprocessor), (regr_name_mort, regr_model_mort)]
-        )
-        # Chain-RF-Rounding
-        roundingRF_Pipeline = Pipeline(
-            steps=[
-                ("preprocessor", preprocessor),
-                (regr_name_rounding_rf, regr_model_rounding_rf),
-            ]
-        )
         # Chain-RF-Interval
         intervalRF_Pipeline = Pipeline(
             steps=[
@@ -184,29 +143,11 @@ if __name__ == "__main__":
                 (regr_name_interval_rf, regr_model_interval),
             ]
         )
-        # Singletarget-RF
-        singleTargetRF_Pipeline = Pipeline(
-            steps=[
-                ("preprocessor", preprocessor),
-                (regr_name_singleTarget_rf, regr_model_singleTarget_RF),
-            ]
-        )
-        # JC-RF
-        jc_Pipeline_rf = Pipeline(
-            steps=[
-                ("preprocessor", preprocessor),
-                (clas_name_randomForest, clas_model_randomForest),
-            ]
-        )
 
         # res.shape == (n_models, n_splits, 3) with accuracy speed and mean-buckets
         results = model_evaluation(
             models=[
-                intervalRF_Pipeline,
-                roundingRF_Pipeline,
-                singleTargetRF_Pipeline,
-                mort_Pipeline,
-                jc_Pipeline_rf,
+                intervalRF_Pipeline
             ],
             X=X_data,
             Y=Y_data,
@@ -226,6 +167,5 @@ if __name__ == "__main__":
             )
 
     plotData = pd.DataFrame(plotData)
-    plotData.to_csv(DATA_DIR / "PLR_politicalEvaluation.csv")
-    # file_name = f"benchMarkPolitical_MORE-vs-JC"
-    # plot_evaluation_data(plotData,file_name,data_files)
+    plotData.to_csv(DATA_DIR / DATA_FOLDER / f"PLR_politicalEvaluation_coverage={coverage}.csv")
+

@@ -1,7 +1,5 @@
 """
-    File is split up into two sections.
-    The first section contains general functions ot build datatables and plotting function
-    The second section consists of the primary functions for model evaluation
+    General functions used for visualization or plotting.
 """
 
 import math
@@ -72,6 +70,11 @@ def model_predict_round(model, test_X):
     regr_output = model.predict(test_X)
     # print(regr_output)
     return transform_arrayToAPI(np.round(regr_output))
+
+
+"""
+Functions for visualization
+"""
 
 
 def build_plottable_evaluationDataFrame(
@@ -483,6 +486,20 @@ def create_missing_labels(Y, percentage, random_state=0):
 
 
 def model_scores(model, train_X, train_Y, test_X, test_Y):
+    """
+    Outputs the model tau_x_score, when fitted on the training data and predicting the test data.
+    Additionally it measures the overall time needed for both training an prediction and outputs the mean bucket size for the bucket orders.
+    Note: The features are normalized.
+    Args:
+        model (sklearn.model): The model to be used.
+        train_X (np.ndarray): The training data point features
+        train_Y (np.ndarray): The training data point targets
+        test_X (np.ndarray): The test data point features
+        test_Y (np.ndarray): The test data point targets
+
+    Returns:
+        triple: (tau_x_score, training and prediction time, mean_bucket_size)
+    """
     scaler = StandardScaler()
     train_X = scaler.fit_transform(train_X)
     test_X = scaler.transform(test_X)
@@ -510,6 +527,20 @@ def model_scores(model, train_X, train_Y, test_X, test_Y):
 
 
 def model_scores_Pipeline(model, train_X, train_Y, test_X, test_Y):
+    """
+    Similiar to *mode_scores* but instead does not normalize features.
+
+
+    Args:
+        model (sklearn.pipeline): A pipeline containing transformations and at the end a model to be used.
+        train_X (np.ndarray): The training data point features
+        train_Y (np.ndarray): The training data point targets
+        test_X (np.ndarray): The test data point features
+        test_Y (np.ndarray): The test data point targets
+
+    Returns:
+        triple: (tau_x_score, training and prediction time, mean_bucket_size)
+    """
     # assume the model is a pipeline
     a = perf_counter()
     model.fit(train_X, train_Y)
@@ -534,6 +565,23 @@ def model_scores_Pipeline(model, train_X, train_Y, test_X, test_Y):
 
 
 def model_evaluation(models, X, Y, random_state, model_score_function):
+    """
+    Gathers *model_score_function* for each model in models on X and Y.
+    For this it performs 5 * 10-fol CV on X and Y executing *model_score_function* on each split.
+
+
+    Args:
+        models ([sklearn.model]): List of models that should be evaluated
+        X (np.ndarray): The data points
+        Y (np.ndarray): The targets
+        random_state (int): random state for the 5 * 10-fold CV
+        model_score_function (function): Either *model_scores* or model_scores_Pipeline*. 
+            More generally should be a function receiving model, train_data, test_data and returning the (tau_x_score, train and prediction time, mean bucket rank) in this order.
+            
+
+    Returns:
+        np.ndarray: A three dimensional array where the first dimension are the different models, the second the folds and the third containing (tau_x_score, train and prediction time, mean bucket rank)
+    """
     # The Output of clas_model is assumed to be in the correct api format
     n_folds = 10
     n_repeats = 5
@@ -569,6 +617,24 @@ def model_evaluation(models, X, Y, random_state, model_score_function):
 def model_evaluation_missingLabels(
     models, X, Y, random_state, model_score_function, percentage_missing_labels
 ):
+    """
+    Gathers *model_score_function* for each model in models on X and Y.
+    For this it performs 5 * 10-fol CV on X and Y executing *model_score_function* on each split.
+    The training targets Y_train in each fold have *percentage_missing_labels* to evaluate the models with missing labels.
+
+
+    Args:
+        models ([sklearn.models]): _description_
+        X (np.ndarray): The data points
+        Y (np.ndarray): The targets
+        random_state (int): random state for the 5 * 10-fold CV
+        model_score_function (function): Either *model_scores* or model_scores_Pipeline*.
+            More generally should be a function receiving model, train_data, test_data and returning the (tau_x_score, train and prediction time, mean bucket rank) in this order.
+        percentage_missing_labels (float): proportion of missingl targets in the training data.
+
+    Returns:
+        np.ndarray: A three dimensional array where the first dimension are the different models, the second the folds and the third containing (tau_x_score, train and prediction time, mean bucket rank)
+    """
     # The Output of clas_model is assumed to be in the correct api format
     n_folds = 10
     n_repeats = 5

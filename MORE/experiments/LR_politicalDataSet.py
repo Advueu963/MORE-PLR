@@ -33,7 +33,7 @@ if __name__ == "__main__":
     random_state = 0
 
     n_jobs = -1
-    n_jobs = int(os.environ["SLURM_CPUS_PER_TASK"])  # HPC Configuration
+    #n_jobs = int(os.environ["SLURM_CPUS_PER_TASK"])  # HPC Configuration
 
     data_files = ["LR-REAL-Political"]
 

@@ -24,7 +24,7 @@ import os
 
 if __name__ == "__main__":
     n_jobs = -1
-    # n_jobs = int(os.environ['SLURM_CPUS_PER_TASK'])  # HPC configuration
+    #n_jobs = int(os.environ['SLURM_CPUS_PER_TASK'])  # HPC configuration
     # number = int(os.environ["SLURM_ARRAY_TASK_ID"]) # HPC configuration
 
     DATA_FOLDER = "missingLabels"
