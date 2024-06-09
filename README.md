@@ -8,7 +8,8 @@ But generally the models were implemented in the typical *sklearn* style, with f
 # Reproducibility
 Firstly make sure to have scikit-lr installed (the current state-of-the-art).
 To install execute the following command in the *scikit-lr* folder: `pip install --verbose --no-build-isolation --editable .; python setup.py build_ext --inplace`
-All other requirements can be installed via *enviroment.yml*. \
+General python requirements can be installed via *enviroment.yml*. \
+At the end one might need to execute `python setup.py build_ext --inplace` in the root folder, to build the Cython *_overlap_intervals.pyx* file. \
 The scripts used for the experiments can be found in *MORE/experiments* \
 
 # Cite
