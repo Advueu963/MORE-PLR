@@ -1,8 +1,18 @@
 # MORE-PLR
-This repository contains the scource code for the paper **"MORE–PLR: Multi-Output Regression
-Employed for Partial Label Ranking"**
+This repository contains the source code for the paper **"MORE–PLR: Multi-Output Regression
+Employed for Partial Label Ranking"**.
+The data shown in the paper can be found in the **data/** folder. \
+If you are interested of applying these models yourself, take a look at the *SimpleStart.py* file.
+But generally the models were implemented in the typical *sklearn* style, with fit and predict.
+
 # Reproducibility
 Firstly make sure to have scikit-lr installed (the current state-of-the-art).
 To install execute the following command in the *scikit-lr* folder: `pip install --verbose --no-build-isolation --editable .; python setup.py build_ext --inplace`
 All other requirements can be installed via *enviroment.yml*. \
 The scripts used for the experiments can be found in *MORE/experiments* \
+
+# Cite
+TBA
+
+# Kontakt
+TBA
