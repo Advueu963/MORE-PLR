@@ -7,10 +7,12 @@ DATA_DIR = ROOT_DIR / "data/MultiRegression"
 
 """Global model names 
 """
-regr_name_singleTarget_rf = "ST-RF"
+regr_name_singleTarget_RR = "ST-RF-RR"
+regr_name_singleTarget_PI = "ST-RF-PI"
 regr_name_interval_rf = "Chain-RFR-PI"
 regr_name_rounding_rf = "Chain-RFR-RR"
 regr_name_mort = "Native-RF"
+regr_name_mort_interval = "Native-RF-PI"
 clas_name_randomForest = "RPC-RF"
 
 

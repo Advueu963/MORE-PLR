@@ -31,11 +31,29 @@ from MORE.utils import (
     optimism_pessimism_data_approach,
 )
 from _overlap_intervals import get_overlaps
-
 """
     This file contains all evaluated Models of the paper.
 
 """
+
+def predict_raw_interval(estimator, X, q):
+    Y_interval = np.zeros((X.shape[0], 2))
+
+    raw_outputs = np.zeros((X.shape[0],len(estimator.estimators_)))
+
+    for i, e in enumerate(estimator.estimators_):
+        raw_outputs[:, i] = e.predict(X)
+
+        # Build empirical intervals
+    deviation_term = q * np.std(raw_outputs, axis=-1) / np.sqrt(
+        raw_outputs.shape[1]
+    )
+    mean_predictions = np.mean(raw_outputs, axis=-1)
+
+    Y_interval[:,0] = mean_predictions - deviation_term
+    Y_interval[:,1] = mean_predictions + deviation_term
+
+    return Y_interval
 
 
 def _check_method_params(X, params, indices=None):
@@ -78,6 +96,13 @@ def _check_method_params(X, params, indices=None):
 
     return method_params_validated
 
+
+def _get_individual_predictions(predict, X, out, lock, estimator_index):
+    # out.shape == (n_samples,n_classes, n_estimators)
+    prediction = predict(X, check_input=False)
+    # prediction.shape == (n_samples, n_classes)
+    with lock:
+        out[:,:,estimator_index] = prediction
 
 def _accumulate_prediction(predict, X, out, lock):
     """
@@ -149,11 +174,6 @@ def _partition_estimators(n_estimators, n_jobs):
     return n_jobs, n_estimators_per_job.tolist(), [0] + starts.tolist()
 
 
-"""
-MORE Models
-"""
-
-
 class PLR_RandomForestRegressor(RandomForestRegressor):
     def __init__(
         self, n_estimators=100, random_state=0, n_jobs=-1, missing_label_strategy=None
@@ -222,6 +242,92 @@ class PLR_RandomForestRegressor(RandomForestRegressor):
 
         return transform_arrayToAPI(y_hat)
 
+class PLR_RandomForestRegressor_Interval(RandomForestRegressor):
+    def __init__(
+        self, n_estimators=100, random_state=0, n_jobs=-1, missing_label_strategy=None, q=1
+    ):
+        self.q = q
+        self.missing_label_strategy = missing_label_strategy
+        super().__init__(
+            n_estimators=n_estimators, random_state=random_state, n_jobs=n_jobs
+        )
+
+    def fit(self, X, y, sample_weight=None):
+        if self.missing_label_strategy == "optimism":
+            X, y = optimism_data_approach(X, y)
+
+        elif self.missing_label_strategy == "pessimism":
+            X, y = pessimism_data_approach(X, y)
+
+        elif self.missing_label_strategy == "balanced":
+            X, y = optimism_pessimism_data_approach(X, y)
+
+        elif self.missing_label_strategy == "drop_individuals":
+            non_missing_ranks = np.any(y >= 0, axis=1)
+            X, y = X[non_missing_ranks], y[non_missing_ranks]
+
+        super().fit(X, y, sample_weight)
+
+    def predict(self, X):
+        """
+        Predict regression target for X.
+
+        The predicted regression target of an input sample is computed as the
+        mean predicted regression targets of the trees in the forest.
+
+        Parameters
+        ----------
+        X : {array-like, sparse matrix} of shape (n_samples, n_features)
+            The input samples. Internally, its dtype will be converted to
+            ``dtype=np.float32``. If a sparse matrix is provided, it will be
+            converted into a sparse ``csr_matrix``.
+
+        Returns
+        -------
+        y : ndarray of shape (n_samples,) or (n_samples, n_outputs)
+            The predicted values.
+        """
+        check_is_fitted(self)
+        # Check data
+        X = self._validate_X_predict(X)
+
+        # Assign chunk of trees to jobs
+        n_jobs, _, _ = _partition_estimators(self.n_estimators, self.n_jobs)
+
+        # create predicton intervals
+        y_interval = np.zeros((X.shape[0], self.n_outputs_, 2), dtype=np.float64)
+        #y_hat.shape == (n_samples, n_classes, 2)
+        n_samples, n_classes, _ = y_interval.shape
+
+        # avoid storing the output of every estimator by summing them here
+        if self.n_outputs_ > 1:
+            raw_outputs = np.zeros((X.shape[0], self.n_outputs_, len(self.estimators_)), dtype=np.float64)
+        else:
+            print("Only one class in PLR makes no sense!")
+            return None
+            #y_hat = np.zeros((X.shape[0]), dtype=np.float64)
+
+        # Parallel loop
+        lock = threading.Lock()
+        Parallel(n_jobs=n_jobs, verbose=self.verbose, require="sharedmem")(
+            delayed(_get_individual_predictions)(e.predict, X, raw_outputs, lock,i)
+            for i,e in enumerate(self.estimators_)
+        )
+        mean_prediction = np.mean(raw_outputs,axis=-1)
+        deviation_term = self.q * np.std(raw_outputs, axis=-1) / np.sqrt(
+            len(self.estimators_)
+        )
+
+        y_interval[:,:,0] = mean_prediction - deviation_term
+        y_interval[:,:,1] = mean_prediction + deviation_term
+
+        consensus = np.zeros(shape=(n_samples, n_classes))  # N_samples, N_outputs
+        for i in range(n_samples):
+            get_overlaps(y_interval[i], n_classes, consensus[i])
+
+        erg = transform_arrayToAPI(consensus)
+
+        return erg
 
 class PLR_MultiOutputRegressor(MultiOutputRegressor):
     def __str__(self):
@@ -356,6 +462,168 @@ class PLR_MultiOutputRegressor(MultiOutputRegressor):
         return transform_arrayToAPI(np.asarray(y).T)
 
 
+class PLR_MultiOutputRegressor_Interval(MultiOutputRegressor):
+    def __str__(self):
+        return "PLR_MultiOutputRegressor_Interval"
+
+    def __init__(self, estimator, n_jobs=-1, q=1, missing_label_strategy=None):
+        """
+
+        Args:
+            estimator: base estimator to be used for each target
+            n_jobs: controls parallelism according to sklearn.MultiOutputRegressor
+            q: acts a confidence interval regulator according to the 68-95-99.7 rule https://en.wikipedia.org/wiki/68–95–99.7_rule
+            missing_label_strategy: determinies how to handle possible missing labels in the training set.
+                None == Dont do anything --> Assumes no missing labels in training set
+                "drop_individuals" == For each base estimator on a target remove the individual with missing target labels
+                "optimism" == Assume the missing target labels are the best possible
+                "pessimism" == Assume the missing target labels are the worst possible
+                "balanced" == Assume that both optimal and pessimistic one are equal likely. Thus add both to the data
+        """
+        self.estimator = estimator
+        self.n_jobs = n_jobs
+        self.q = q
+        self.missing_label_strategy = missing_label_strategy
+        super().__init__(estimator=estimator, n_jobs=n_jobs)
+
+    def fit(self, X, y, sample_weight=None, **fit_params):
+        # source: https://github.com/scikit-learn/scikit-learn/blob/f07e0138bfee41cd2c0a5d0251dc3fe03e6e1084/sklearn/multioutput.py#L267
+        if not hasattr(self.estimator, "fit"):
+            raise ValueError("The base estimator should implement a fit method")
+
+        y = self._validate_data(X="no_validation", y=y, multi_output=True)
+
+        if y.ndim == 1:
+            raise ValueError(
+                "y must have at least two dimensions for "
+                "multi-output regression but has only one."
+            )
+        if _routing_enabled():
+            if sample_weight is not None:
+                fit_params["sample_weight"] = sample_weight
+            routed_params = process_routing(
+                self,
+                "fit",
+                **fit_params,
+            )
+        else:
+            if sample_weight is not None and not has_fit_parameter(
+                self.estimator, "sample_weight"
+            ):
+                raise ValueError(
+                    "Underlying estimator does not support sample weights."
+                )
+
+            fit_params_validated = _check_method_params(X, params=fit_params)
+            routed_params = Bunch(estimator=Bunch(fit=fit_params_validated))
+            if sample_weight is not None:
+                routed_params.estimator.fit["sample_weight"] = sample_weight
+
+        if self.missing_label_strategy == "drop_individuals":
+            self.estimators_ = Parallel(n_jobs=self.n_jobs)(
+                delayed(_fit_estimator)(
+                    self.estimator,
+                    X[y[:, i] >= 0],
+                    y[:, i][y[:, i] >= 0],
+                    **routed_params.estimator.fit,
+                )
+                for i in range(y.shape[1])
+            )
+        elif self.missing_label_strategy == "optimism":
+            X_opt, y_opt = optimism_data_approach(X, y)
+            self.estimators_ = Parallel(n_jobs=self.n_jobs)(
+                delayed(_fit_estimator)(
+                    self.estimator, X_opt, y_opt[:, i], **routed_params.estimator.fit
+                )
+                for i in range(y_opt.shape[1])
+            )
+        elif self.missing_label_strategy == "pessimism":
+            X_pes, y_pes = pessimism_data_approach(X, y)
+            self.estimators_ = Parallel(n_jobs=self.n_jobs)(
+                delayed(_fit_estimator)(
+                    self.estimator, X_pes, y_pes[:, i], **routed_params.estimator.fit
+                )
+                for i in range(y_pes.shape[1])
+            )
+        elif self.missing_label_strategy == "balanced":
+            X_opt_pes, y_opt_pes = optimism_pessimism_data_approach(X, y)
+            self.estimators_ = Parallel(n_jobs=self.n_jobs)(
+                delayed(_fit_estimator)(
+                    self.estimator,
+                    X_opt_pes,
+                    y_opt_pes[:, i],
+                    **routed_params.estimator.fit,
+                )
+                for i in range(y_opt_pes.shape[1])
+            )
+        else:
+            self.estimators_ = Parallel(n_jobs=self.n_jobs)(
+                delayed(_fit_estimator)(
+                    self.estimator, X, y[:, i], **routed_params.estimator.fit
+                )
+                for i in range(y.shape[1])
+            )
+
+        if hasattr(self.estimators_[0], "n_features_in_"):
+            self.n_features_in_ = self.estimators_[0].n_features_in_
+        if hasattr(self.estimators_[0], "feature_names_in_"):
+            self.feature_names_in_ = self.estimators_[0].feature_names_in_
+
+        return self
+
+    def predict_raw_interval(self, estimator, X):
+        Y_interval = np.zeros((X.shape[0], 2))
+
+        raw_outputs = np.zeros((X.shape[0],len(estimator.estimators_)))
+
+        for i, e in enumerate(estimator.estimators_):
+            raw_outputs[:, i] = e.predict(X)
+
+        # Build empirical intervals
+        deviation_term = self.q * np.std(raw_outputs, axis=-1) / np.sqrt(
+            raw_outputs.shape[1]
+        )
+        mean_predictions = np.mean(raw_outputs, axis=-1)
+
+        Y_interval[:,0] = mean_predictions - deviation_term
+        Y_interval[:,1] = mean_predictions + deviation_term
+
+        return Y_interval
+
+    def predict(self, X):
+        """Predict multi-output variable using model for each target variable.
+
+        Parameters
+        ----------
+        X : {array-like, sparse matrix} of shape (n_samples, n_features)
+            The input data.
+
+        Returns
+        -------
+        y : {array-like, sparse matrix} of shape (n_samples, n_outputs)
+            Multi-output targets predicted across multiple predictors.
+            Note: Separate models are generated for each predictor.
+        """
+
+        check_is_fitted(self)
+        if not hasattr(self.estimators_[0], "predict"):
+            raise ValueError("The base estimator should implement a predict method")
+
+        y = np.array(Parallel(n_jobs=self.n_jobs)(
+            delayed(predict_raw_interval)(e, X, self.q) for e in self.estimators_
+        ))# (n_classes, n_samples, 2)
+
+        n_classes, n_samples, _ = y.shape
+        consensus = np.zeros(shape=(n_samples, n_classes))  # N_samples, N_outputs
+        for i in range(n_samples):
+            get_overlaps(y[:,i,:], n_classes, consensus[i])
+
+        erg = transform_arrayToAPI(consensus)
+
+
+        return erg
+
+
 class PLR_RegressorChain(RegressorChain):
     def __str__(self):
         return "PLR_RegressorChain"
@@ -414,7 +682,7 @@ class PLR_RegressorChainInterval(PLR_RegressorChain):
         return "PLR_RegressorChainInterval"
 
     def __init__(
-        self, estimator, random_state, order=None, missing_label_strategy=None
+        self, estimator, random_state, order=None, missing_label_strategy=None, q=1
     ):
         """
         Args:
@@ -430,6 +698,7 @@ class PLR_RegressorChainInterval(PLR_RegressorChain):
             "optimism" == Assume the missing target labels are the best possible \n
             "pessimism" == Assume the missing target labels are the worst possible \n
             "balanced" == Assume that both optimal and pessimistic one are equal likely. Thus add both to the data
+        q: acts a confidence interval regulator according to the 68-95-99.7 rule https://en.wikipedia.org/wiki/68–95–99.7_rule
         """
         super().__init__(
             estimator,
@@ -437,6 +706,7 @@ class PLR_RegressorChainInterval(PLR_RegressorChain):
             random_state,
             missing_label_strategy=missing_label_strategy,
         )
+        self.q = q
 
     def predict_raw_interval(self, X):
         """
@@ -479,7 +749,7 @@ class PLR_RegressorChainInterval(PLR_RegressorChain):
             Y_pred_chain[:, chain_idx] = np.mean(raw_outputs, axis=-1)
 
             # Build empirical intervals
-            deviation_term = np.std(raw_outputs, axis=-1) / np.sqrt(
+            deviation_term = self.q * np.std(raw_outputs, axis=-1) / np.sqrt(
                 raw_outputs.shape[1]
             )
             Y_pred_interval[:, chain_idx, 0] = (
