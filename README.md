@@ -13,10 +13,11 @@ At the end one might need to execute `python setup.py build_ext --inplace` in th
 The scripts used for the experiments can be found in *MORE/experiments* \
 
 # Results
-All results can be found in `data/MultiRegression`.
-The 3 main files `LR_and_PLR.csv`,`LR_and_PLR_Missing.csv`and `LR_and_PLR_sensitivity_analysis.csv`contain all the mentioned results in the paper.
-The `Everythin.csv` has merged all the 3 above-mentioned files.
-All other files contained in that directory/subdirectories are individual evaluations for each discussed model.
+All results can be found in `data`.  
+We hope the structure of the folders helps navigation.
+The folder `results` contains all the results for the different models.
+The folder `tables` contains the results represented as tables.
+the folder `reports` contains `.html` giving a overview of the results.
 
 # Cite
 TBA
