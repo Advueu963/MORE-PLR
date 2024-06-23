@@ -13,11 +13,11 @@ At the end one might need to execute `python setup.py build_ext --inplace` in th
 The scripts used for the experiments can be found in *MORE/experiments* \
 
 # Results
-All results can be found in `data`.  
-We hope the structure of the folders helps navigation.
-The folder `results` contains all the results for the different models.
-The folder `tables` contains the results represented as tables.
-the folder `reports` contains `.html` giving a overview of the results.
+Nicely structured you can find the presented results split up into three view options:
+ - `data/results` contains all the results for the evaluations as .csv file.
+ - `data/tables` contains the results represented as tables.
+ - `data/reports` contains the results as `.html` overview.
+
 
 # Cite
 TBA
