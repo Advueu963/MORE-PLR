@@ -20,7 +20,14 @@ Nicely structured you can find the presented results split up into three view op
 
 
 # Cite
-TBA
+@inproceedings{thies2024more,
+  title={MORE--PLR: Multi-Output Regression Employed for Partial Label Ranking},
+  author={Thies, Santo MAR and Alfaro, Juan C and Bengs, Viktor},
+  booktitle={International Conference on Discovery Science},
+  pages={401--416},
+  year={2024},
+  organization={Springer}
+}
 
 # Contact
 For indepth questions on MORE feel free to contact S.Thies@campus.lmu.de or JuanCarlos.Alfaro@uclm.es.
