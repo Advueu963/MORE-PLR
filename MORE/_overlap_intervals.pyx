@@ -19,15 +19,13 @@ from libc.math cimport lround as c_lround
 cdef DTYPE_t **get_overlaps_array(np.int64_t n_classes,np.int64_t values_in_classes, DTYPE_t init_value) nogil:
     cdef DTYPE_t  **pointer
     pointer = <DTYPE_t **> malloc(sizeof(DTYPE_t *) * n_classes)
-    if pointer == NULL:
-        printf("ERROR with allocating memory in get_overlaps_array")
     for k in range(values_in_classes):
        pointer[k] = <DTYPE_t*> malloc(sizeof(DTYPE_t) * values_in_classes)
        if not pointer[k]:
             for j in range(k):
                free(pointer[k])
             free(pointer)
-            printf("ERROR with allocating memory in get_overlaps_array\n")
+            ##printf("ERROR with allocating memory in get_overlaps_array\n")
             return NULL
 
     for i in range(n_classes):
@@ -48,6 +46,7 @@ cdef void print_overlaps_array(DTYPE_t **overlaps_interval, np.int64_t n_classes
         for j in range(values_in_classes):
             printf("%.3f ", overlaps_interval[i][j])
         printf("\n")
+
 
 cdef void dfs_min_val(DTYPE_t** overlaps, np.int64_t n_classes,
                       np.uint8_t* visited, np.int64_t start, DTYPE_t *min_val,
@@ -205,9 +204,13 @@ cdef void _get_overlaps(DTYPE_t_2D intervals,
 
     # find all overlapping intervals and distinguish them in groups
     # the groups are the rows and the columns the indices of the intervals belonging to the group
+    #print_overlaps_array(overlaps, n_classes,n_classes)
+
     # -1 indicates not a group / not a member
     non_overlap_groups = dfs(overlaps,n_classes,visited,0)
-
+    #printf("---NON-OVERLAPS---\n")
+    #print_overlaps_array(non_overlap_groups, n_classes+1,n_classes+1)
+    #printf("---NON-OVERLAPs---\n")
     # Get the mean prediction of the groups interval as new representative of the groups
     cdef int group_member
     cdef float current_group_lower
@@ -240,4 +243,5 @@ cdef void _get_overlaps(DTYPE_t_2D intervals,
 
 
 cpdef get_overlaps(intervals,n_classes,consensus):
+    intervals += abs(np.min(intervals)) + 0.1# shift the intervals to positive values
     _get_overlaps(intervals,n_classes, consensus)

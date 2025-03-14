@@ -1,5 +1,8 @@
 # external
+from copy import deepcopy
+
 from sklearn.ensemble import RandomForestRegressor
+from sklearn.model_selection import KFold
 from sklearn.multioutput import (
     RegressorChain,
     MultiOutputRegressor,
@@ -22,6 +25,7 @@ import pandas as pd
 from time import perf_counter
 import threading
 from joblib import effective_n_jobs
+from sklr.metrics import tau_x_score
 
 # code intern
 from MORE.utils import (
@@ -175,6 +179,10 @@ def _partition_estimators(n_estimators, n_jobs):
 
 
 class PLR_RandomForestRegressor(RandomForestRegressor):
+
+    def __str__(self):
+        return "PLR_RandomForestRegressor"
+
     def __init__(
         self, n_estimators=100, random_state=0, n_jobs=-1, missing_label_strategy=None
     ):
@@ -242,7 +250,86 @@ class PLR_RandomForestRegressor(RandomForestRegressor):
 
         return transform_arrayToAPI(y_hat)
 
+class PLR_RandomForestRegressor_Epsilon(PLR_RandomForestRegressor):
+
+    def __str__(self):
+        return f"PLR_RandomForestRegressor_Epsilon({self.epsilon})"
+
+    def __init__(
+        self,
+            epsilon,
+            n_estimators=100,
+            random_state=0,
+            n_jobs=-1, missing_label_strategy=None
+    ):
+        self.epsilon = epsilon
+        super().__init__(n_estimators=n_estimators, random_state=random_state,
+                         n_jobs=n_jobs, missing_label_strategy=missing_label_strategy)
+
+    def predict(self, X):
+        """
+        Predict regression target for X.
+
+        The predicted regression target of an input sample is computed as the
+        mean predicted regression targets of the trees in the forest.
+
+        Parameters
+        ----------
+        X : {array-like, sparse matrix} of shape (n_samples, n_features)
+            The input samples. Internally, its dtype will be converted to
+            ``dtype=np.float32``. If a sparse matrix is provided, it will be
+            converted into a sparse ``csr_matrix``.
+
+        Returns
+        -------
+        y : ndarray of shape (n_samples,) or (n_samples, n_outputs)
+            The predicted values.
+        """
+        check_is_fitted(self)
+        # Check data
+        X = self._validate_X_predict(X)
+
+        # Assign chunk of trees to jobs
+        n_jobs, _, _ = _partition_estimators(self.n_estimators, self.n_jobs)
+
+        # avoid storing the output of every estimator by summing them here
+        if self.n_outputs_ > 1:
+            y_hat = np.zeros((X.shape[0], self.n_outputs_), dtype=np.float64)
+        else:
+            y_hat = np.zeros((X.shape[0]), dtype=np.float64)
+
+        # Parallel loop
+        lock = threading.Lock()
+        Parallel(n_jobs=n_jobs, verbose=self.verbose, require="sharedmem")(
+            delayed(_accumulate_prediction)(e.predict, X, [y_hat], lock)
+            for e in self.estimators_
+        )
+
+        y_hat /= len(self.estimators_)
+
+        n_samples, n_classes = y_hat.shape
+
+        # Normalize array
+        min_ys = np.min(y_hat, axis=1).reshape(-1, 1)
+        max_ys = np.max(y_hat, axis=1).reshape(-1, 1)
+        norm_y = (y_hat - min_ys) / (max_ys - min_ys)
+
+        consensus = np.zeros(shape=(n_samples, n_classes))  # N_samples, N_outputs
+        for i in range(n_samples):
+            y_hat_interval = np.vstack((norm_y[i] - self.epsilon,
+                                    norm_y[i] + self.epsilon)).T
+            get_overlaps(y_hat_interval, n_classes, consensus[i])
+
+        return transform_arrayToAPI(consensus)
+
+
+
+
 class PLR_RandomForestRegressor_Interval(RandomForestRegressor):
+
+    def __str__(self):
+        return "PLR_RandomForestRegressor_Interval"
+
     def __init__(
         self, n_estimators=100, random_state=0, n_jobs=-1, missing_label_strategy=None, q=1
     ):
@@ -325,9 +412,7 @@ class PLR_RandomForestRegressor_Interval(RandomForestRegressor):
         for i in range(n_samples):
             get_overlaps(y_interval[i], n_classes, consensus[i])
 
-        erg = transform_arrayToAPI(consensus)
-
-        return erg
+        return consensus
 
 class PLR_MultiOutputRegressor(MultiOutputRegressor):
     def __str__(self):
@@ -458,9 +543,9 @@ class PLR_MultiOutputRegressor(MultiOutputRegressor):
         y = Parallel(n_jobs=self.n_jobs)(
             delayed(e.predict)(X) for e in self.estimators_
         )
+        y = np.asarray(y).T # (n_samples, n_classes)
 
-        return transform_arrayToAPI(np.asarray(y).T)
-
+        return transform_arrayToAPI(y)
 
 class PLR_MultiOutputRegressor_Interval(MultiOutputRegressor):
     def __str__(self):
@@ -571,25 +656,6 @@ class PLR_MultiOutputRegressor_Interval(MultiOutputRegressor):
 
         return self
 
-    def predict_raw_interval(self, estimator, X):
-        Y_interval = np.zeros((X.shape[0], 2))
-
-        raw_outputs = np.zeros((X.shape[0],len(estimator.estimators_)))
-
-        for i, e in enumerate(estimator.estimators_):
-            raw_outputs[:, i] = e.predict(X)
-
-        # Build empirical intervals
-        deviation_term = self.q * np.std(raw_outputs, axis=-1) / np.sqrt(
-            raw_outputs.shape[1]
-        )
-        mean_predictions = np.mean(raw_outputs, axis=-1)
-
-        Y_interval[:,0] = mean_predictions - deviation_term
-        Y_interval[:,1] = mean_predictions + deviation_term
-
-        return Y_interval
-
     def predict(self, X):
         """Predict multi-output variable using model for each target variable.
 
@@ -618,11 +684,68 @@ class PLR_MultiOutputRegressor_Interval(MultiOutputRegressor):
         for i in range(n_samples):
             get_overlaps(y[:,i,:], n_classes, consensus[i])
 
-        erg = transform_arrayToAPI(consensus)
+        return consensus
+
+class PLR_MultiOutputRegressor_Epsilon(PLR_MultiOutputRegressor):
+    def __str__(self):
+        return f"PLR_MultiOutputRegressor_Epsilon({self.epsilon})"
+
+    def __init__(self, estimator, epsilon=None, n_jobs=-1, missing_label_strategy=None):
+        """
+
+        Args:
+            estimator: base estimator to be used for each target
+            epsilon: the epsilon value for the epsilon-closeness interval
+            n_jobs: controls parallelism according to sklearn.MultiOutputRegressor
+            missing_label_strategy: determinies how to handle possible missing labels in the training set.
+                None == Dont do anything --> Assumes no missing labels in training set
+                "drop_individuals" == For each base estimator on a target remove the individual with missing target labels
+                "optimism" == Assume the missing target labels are the best possible
+                "pessimism" == Assume the missing target labels are the worst possible
+                "balanced" == Assume that both optimal and pessimistic one are equal likely. Thus add both to the data
+        """
+        self.epsilon = epsilon
+        super().__init__(estimator=estimator, n_jobs=n_jobs, missing_label_strategy=missing_label_strategy)
+
+    def predict(self, X):
+        """Predict multi-output variable using model for each target variable.
+
+        Parameters
+        ----------
+        X : {array-like, sparse matrix} of shape (n_samples, n_features)
+            The input data.
+
+        Returns
+        -------
+        y : {array-like, sparse matrix} of shape (n_samples, n_outputs)
+            Multi-output targets predicted across multiple predictors.
+            Note: Separate models are generated for each predictor.
+        """
+
+        check_is_fitted(self)
+        if not hasattr(self.estimators_[0], "predict"):
+            raise ValueError("The base estimator should implement a predict method")
+
+        y_hat = Parallel(n_jobs=self.n_jobs)(
+            delayed(e.predict)(X) for e in self.estimators_
+        )
+        y_hat = np.asarray(y_hat).T
+
+        n_samples, n_classes = y_hat.shape
+
+        # Normalize array
+        min_ys = np.min(y_hat, axis=1).reshape(-1, 1)
+        max_ys = np.max(y_hat, axis=1).reshape(-1, 1)
+        norm_y = (y_hat - min_ys) / (max_ys - min_ys)
 
 
-        return erg
+        consensus = np.zeros(shape=(n_samples, n_classes))  # N_samples, N_outputs
+        for i in range(n_samples):
+            y_hat_interval = np.vstack((norm_y[i] - self.epsilon,
+                                    norm_y[i] + self.epsilon)).T
+            get_overlaps(y_hat_interval, n_classes, consensus[i])
 
+        return consensus
 
 class PLR_RegressorChain(RegressorChain):
     def __str__(self):
@@ -675,6 +798,55 @@ class PLR_RegressorChain(RegressorChain):
 
         return transform_arrayToAPI(raw_output)
 
+class PLR_RegressorChain_Epsilon(PLR_RegressorChain):
+    def __str__(self):
+        return f"PLR_RegressorChain_Epsilon({self.epsilon})"
+
+    def __init__(
+        self,
+            estimator,
+            epsilon,
+            random_state,
+            order=None,
+            missing_label_strategy=None
+    ):
+        """
+        Args:
+        estimator: base estimator to be used for each target
+        epsilon: the epsilon value for the epsilon-closeness interval
+        random_state: number of the random generator to have reproducible results
+        order: The order in which the target is arranged.
+            None == Will use the `find_chain_order
+        ` function to determine the order
+            [int] == list of target indices determining the order.
+        missing_label_strategy: determinies how to handle possible missing labels in the training set.
+            None == Dont do anything --> Assumes no missing labels in training set
+            "drop_individuals" == For each base estimator on a target remove the individual with missing target labels
+            "optimism" == Assume the missing target labels are the best possible
+            "pessimism" == Assume the missing target labels are the worst possible
+            "balanced" == Assume that both optimal and pessimistic one are equal likely. Thus add both to the data
+        """
+        self.epsilon = epsilon
+        super().__init__(estimator, random_state, order, missing_label_strategy)
+
+
+    def predict(self, X):
+        y_hat = super(RegressorChain, self).predict(X)
+
+        n_samples, n_classes = y_hat.shape
+
+        # Normalize array
+        min_ys = np.min(y_hat, axis=1).reshape(-1, 1)
+        max_ys = np.max(y_hat, axis=1).reshape(-1, 1)
+        norm_y = (y_hat - min_ys) / (max_ys - min_ys)
+
+        consensus = np.zeros(shape=(n_samples, n_classes))  # N_samples, N_outputs
+        for i in range(n_samples):
+            y_hat_interval = np.vstack((norm_y[i] - self.epsilon,
+                                    norm_y[i] + self.epsilon)).T
+            get_overlaps(y_hat_interval, n_classes, consensus[i])
+
+        return consensus
 
 class PLR_RegressorChainInterval(PLR_RegressorChain):
 
@@ -785,8 +957,7 @@ class PLR_RegressorChainInterval(PLR_RegressorChain):
         for i in range(consensus.shape[0]):
             get_overlaps(Y_pred_int[i], n_classes, consensus[i])
 
-        erg = transform_arrayToAPI(consensus)
         # print("Ranking Build Time: ", c-b)
         # print("Transformation Time: ", d-c)
 
-        return erg
+        return consensus

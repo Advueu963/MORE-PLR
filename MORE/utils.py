@@ -1,11 +1,9 @@
 """
-    General functions used for visualization or plotting.
+    File is split up into two sections.
+    The first section contains general functions ot build datatables and plotting function
+    The second section consists of the primary functions for model evaluation
 """
 
-import math
-from time import perf_counter
-
-import numpy as np
 import pandas as pd
 from sklearn.datasets import fetch_openml
 import seaborn as sns
@@ -16,6 +14,95 @@ from sklearn.model_selection import KFold, StratifiedKFold, RepeatedKFold
 from sklr.metrics import tau_x_score
 from sklearn.preprocessing import StandardScaler
 
+
+"""
+Rank Encoding Functions
+"""
+
+def dense_to_standard_competition(dense_ranking: np.ndarray) -> np.ndarray:
+    """
+    Transforms a dense ranking into a standard competition ranking.
+
+    Parameters:
+        dense_ranking (np.ndarray): A 2D numpy array of dense rankings.
+                                   Each row represents a sample, and each column represents rank positions.
+
+    Returns:
+        np.ndarray: A 2D numpy array with the standard competition ranking.
+    """
+    dense_ranking = dense_ranking.astype(int)
+    assert len(dense_ranking.shape) == 2, "dense_ranking must be a 2D numpy array."
+    assert np.all(np.min(dense_ranking,axis=1) == 1), "dense_ranking must start with 1!"
+
+    dense_ranking = dense_ranking.astype(int)
+
+    n_samples, n_columns = dense_ranking.shape
+    standard_competition_ranking = np.zeros_like(dense_ranking)
+    possible_rankings = np.arange(1, n_columns + 1)
+    for row in range(n_samples):
+            dense_vector = dense_ranking[row, :]
+            standard_competition_vector = np.zeros(n_columns)
+            for ranking in possible_rankings:
+                mask = dense_vector == ranking
+                standard_competition_vector[mask] = 1 + np.sum(dense_vector < ranking, axis=0)
+            standard_competition_ranking[row, :] = standard_competition_vector
+    return standard_competition_ranking
+
+def dense_to_modified_competition(dense_ranking: np.ndarray) -> np.ndarray:
+    """
+    Transforms a dense ranking into a modified competition ranking.
+
+    Parameters:
+        dense_ranking (np.ndarray): A 2D numpy array of dense rankings.
+                                   Each row represents a sample, and each column represents rank positions.
+
+    Returns:
+        np.ndarray: A 2D numpy array with the modified competition ranking.
+    """
+    dense_ranking = dense_ranking.astype(int)
+    assert len(dense_ranking.shape) == 2, "dense_ranking must be a 2D numpy array."
+    assert np.all(np.min(dense_ranking,axis=1) == 1), "dense_ranking must start with 1!"
+
+    dense_ranking = dense_ranking.astype(int)
+
+    n_samples, n_columns = dense_ranking.shape
+    standard_competition_ranking = np.zeros_like(dense_ranking)
+    possible_rankings = np.arange(1, n_columns + 1)
+    for row in range(n_samples):
+            dense_vector = dense_ranking[row, :]
+            standard_competition_vector = np.zeros(n_columns)
+            for ranking in possible_rankings:
+                mask = dense_vector == ranking
+                standard_competition_vector[mask] = np.sum(dense_vector < ranking, axis=0) + np.sum(dense_vector == ranking,axis=0)
+            standard_competition_ranking[row, :] = standard_competition_vector
+    return standard_competition_ranking
+
+def dense_to_fractional_ranking(dense_ranking: np.ndarray) -> np.ndarray:
+    """
+    Transforms a dense ranking into a fractional ranking.
+
+    Parameters:
+        dense_ranking (np.ndarray): A 2D numpy array of dense rankings.
+                                   Each row represents a sample, and each column represents rank positions.
+
+    Returns:
+        np.ndarray: A 2D numpy array with the fractional ranking.
+    """
+    dense_ranking = dense_ranking.astype(float)
+    assert len(dense_ranking.shape) == 2, "dense_ranking must be a 2D numpy array."
+    assert np.all(np.min(dense_ranking,axis=1) == 1), "dense_ranking must start with 1!"
+
+    n_samples, n_columns = dense_ranking.shape
+    standard_competition_ranking = np.zeros_like(dense_ranking)
+    possible_rankings = np.arange(1, n_columns + 1)
+    for row in range(n_samples):
+            dense_vector = dense_ranking[row, :]
+            standard_competition_vector = np.zeros(n_columns)
+            for ranking in possible_rankings:
+                mask = dense_vector == ranking
+                standard_competition_vector[mask] = np.sum(dense_vector < ranking, axis=0) +  (1 + (np.sum(dense_vector == ranking,axis=0)-1)*0.5)
+            standard_competition_ranking[row, :] = standard_competition_vector
+    return standard_competition_ranking
 
 def create_apiRanks(array):
     # File to build dense ranking vectors. Example: (1,2,2,4) -> (1,2,2,3).
@@ -49,6 +136,9 @@ def transform_arrayToAPI(array):
 
     return api_ranks
 
+"""
+Evaluation Utils
+"""
 
 def get_Buckets_Sizes_Counts(Y):
     unique_rankings, counts = np.unique(Y.astype(int), axis=0, return_counts=True)
@@ -70,11 +160,6 @@ def model_predict_round(model, test_X):
     regr_output = model.predict(test_X)
     # print(regr_output)
     return transform_arrayToAPI(np.round(regr_output))
-
-
-"""
-Functions for visualization
-"""
 
 
 def build_plottable_evaluationDataFrame(
@@ -144,6 +229,7 @@ def build_plottable_evaluationDataFrame(
             Y=Y,
             random_state=random_state,
             model_score_function=model_score_function,
+            ranking_encoding="standard"
         )
 
         # Add regression Outputs
@@ -171,6 +257,7 @@ def build_plottable_evaluationDataFrame_csvData(
     model_evaluation_function,
     model_score_function,
     model_names=[""],
+    rank_encoding="dense"
 ):
     names, csv_file_name = list(name_to_data.keys()), list(name_to_data.values())
     # data frame later used for prediction
@@ -229,6 +316,7 @@ def build_plottable_evaluationDataFrame_csvData(
             Y=Y,
             random_state=random_state,
             model_score_function=model_score_function,
+            rank_encoding=rank_encoding
         )
 
         # Add Outputs ot dataFrame
@@ -486,20 +574,6 @@ def create_missing_labels(Y, percentage, random_state=0):
 
 
 def model_scores(model, train_X, train_Y, test_X, test_Y):
-    """
-    Outputs the model tau_x_score, when fitted on the training data and predicting the test data.
-    Additionally it measures the overall time needed for both training an prediction and outputs the mean bucket size for the bucket orders.
-    Note: The features are normalized.
-    Args:
-        model (sklearn.model): The model to be used.
-        train_X (np.ndarray): The training data point features
-        train_Y (np.ndarray): The training data point targets
-        test_X (np.ndarray): The test data point features
-        test_Y (np.ndarray): The test data point targets
-
-    Returns:
-        triple: (tau_x_score, training and prediction time, mean_bucket_size)
-    """
     scaler = StandardScaler()
     train_X = scaler.fit_transform(train_X)
     test_X = scaler.transform(test_X)
@@ -527,20 +601,6 @@ def model_scores(model, train_X, train_Y, test_X, test_Y):
 
 
 def model_scores_Pipeline(model, train_X, train_Y, test_X, test_Y):
-    """
-    Similiar to *mode_scores* but instead does not normalize features.
-
-
-    Args:
-        model (sklearn.pipeline): A pipeline containing transformations and at the end a model to be used.
-        train_X (np.ndarray): The training data point features
-        train_Y (np.ndarray): The training data point targets
-        test_X (np.ndarray): The test data point features
-        test_Y (np.ndarray): The test data point targets
-
-    Returns:
-        triple: (tau_x_score, training and prediction time, mean_bucket_size)
-    """
     # assume the model is a pipeline
     a = perf_counter()
     model.fit(train_X, train_Y)
@@ -564,24 +624,8 @@ def model_scores_Pipeline(model, train_X, train_Y, test_X, test_Y):
     )
 
 
-def model_evaluation(models, X, Y, random_state, model_score_function):
-    """
-    Gathers *model_score_function* for each model in models on X and Y.
-    For this it performs 5 * 10-fol CV on X and Y executing *model_score_function* on each split.
-
-
-    Args:
-        models ([sklearn.model]): List of models that should be evaluated
-        X (np.ndarray): The data points
-        Y (np.ndarray): The targets
-        random_state (int): random state for the 5 * 10-fold CV
-        model_score_function (function): Either *model_scores* or model_scores_Pipeline*. 
-            More generally should be a function receiving model, train_data, test_data and returning the (tau_x_score, train and prediction time, mean bucket rank) in this order.
-            
-
-    Returns:
-        np.ndarray: A three dimensional array where the first dimension are the different models, the second the folds and the third containing (tau_x_score, train and prediction time, mean bucket rank)
-    """
+def model_evaluation(models, X, Y, random_state, model_score_function,
+                     rank_encoding="dense"):
     # The Output of clas_model is assumed to be in the correct api format
     n_folds = 10
     n_repeats = 5
@@ -598,6 +642,14 @@ def model_evaluation(models, X, Y, random_state, model_score_function):
             Y[train_idx],
             Y[test_idx],
         )
+        # The Y_test output is not changed, as the models are coded to predict in dense formal
+        if rank_encoding == "standard":
+            Y_train = dense_to_standard_competition(Y_train)
+        elif rank_encoding == "modified":
+            Y_train = dense_to_modified_competition(Y_train)
+        elif rank_encoding == "fractional":
+            Y_train = dense_to_fractional_ranking(Y_train)
+
         for i in range(len(models)):
             res[i, split] = model_score_function(
                 model=models[i],
@@ -615,26 +667,9 @@ def model_evaluation(models, X, Y, random_state, model_score_function):
 
 
 def model_evaluation_missingLabels(
-    models, X, Y, random_state, model_score_function, percentage_missing_labels
+    models, X, Y, random_state, model_score_function, percentage_missing_labels,
+    rank_encoding="dense"
 ):
-    """
-    Gathers *model_score_function* for each model in models on X and Y.
-    For this it performs 5 * 10-fol CV on X and Y executing *model_score_function* on each split.
-    The training targets Y_train in each fold have *percentage_missing_labels* to evaluate the models with missing labels.
-
-
-    Args:
-        models ([sklearn.models]): _description_
-        X (np.ndarray): The data points
-        Y (np.ndarray): The targets
-        random_state (int): random state for the 5 * 10-fold CV
-        model_score_function (function): Either *model_scores* or model_scores_Pipeline*.
-            More generally should be a function receiving model, train_data, test_data and returning the (tau_x_score, train and prediction time, mean bucket rank) in this order.
-        percentage_missing_labels (float): proportion of missingl targets in the training data.
-
-    Returns:
-        np.ndarray: A three dimensional array where the first dimension are the different models, the second the folds and the third containing (tau_x_score, train and prediction time, mean bucket rank)
-    """
     # The Output of clas_model is assumed to be in the correct api format
     n_folds = 10
     n_repeats = 5
@@ -651,6 +686,16 @@ def model_evaluation_missingLabels(
             Y[train_idx],
             Y[test_idx],
         )
+
+        # The Y_test output is not changed, as the models are coded to predict in dense formal
+        if rank_encoding == "standard":
+            Y_train = dense_to_standard_competition(Y_train)
+        elif rank_encoding == "modified":
+            Y_train = dense_to_modified_competition(Y_train)
+        elif rank_encoding == "fractional":
+            Y_train = dense_to_fractional_ranking(Y_train)
+
+
         Y_train = create_missing_labels(
             Y_train, percentage=percentage_missing_labels, random_state=random_state
         )
