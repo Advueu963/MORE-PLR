@@ -11,7 +11,7 @@
             "-std=c++11"
         ],
         "include_dirs": [
-            "/Users/santothies/miniforge3/envs/more-plr/lib/python3.8/site-packages/numpy/core/include"
+            "/dss/dsshome1/0D/ra98xir2/.conda/envs/viktor/lib/python3.8/site-packages/numpy/core/include"
         ],
         "language": "c++",
         "name": "sklr.multioutput.utils",

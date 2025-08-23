@@ -9,10 +9,11 @@
 from abc import ABCMeta, abstractmethod
 
 # Third party
-from joblib import Parallel
+#from joblib import Parallel
 from sklearn.base import BaseEstimator, MetaEstimatorMixin
 from sklearn.multioutput import _fit_estimator
-from sklearn.utils.fixes import delayed
+#from sklearn.utils.fixes import delayed
+from sklearn.utils.parallel import delayed, Parallel
 from sklearn.utils.validation import _check_fit_params, check_is_fitted, _check_sample_weight
 import numpy as np
 
@@ -46,7 +47,7 @@ def _generate_y(X, Y, sample_weight):
             X_new = X[mask]
             y_new = y[mask]
             sample_weight_new = sample_weight[mask]
-
+        
             # Duplicate the tied instances with precedes and succeeds but half of weight
             '''mask = y_new != "tied"
 
@@ -93,7 +94,7 @@ class BasePairwise(MetaEstimatorMixin, BaseEstimator, metaclass=ABCMeta):
 
         self.estimators_ = Parallel(n_jobs=self.n_jobs)(
             delayed(_fit_estimator)(
-                self.estimator, _X, y, _sample_weight, **fit_params
+                self.estimator, _X, y,_sample_weight, **fit_params
             )
             for _X, y, _sample_weight in _generate_y(X, Y, sample_weight)
         )

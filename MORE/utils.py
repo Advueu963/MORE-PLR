@@ -6,6 +6,7 @@
 
 import pandas as pd
 from sklearn.datasets import fetch_openml
+import openml
 import seaborn as sns
 import matplotlib.pyplot as plt
 from time import perf_counter
@@ -13,7 +14,8 @@ import numpy as np
 from sklearn.model_selection import KFold, StratifiedKFold, RepeatedKFold
 from sklr.metrics import tau_x_score
 from sklearn.preprocessing import StandardScaler
-
+from .constants import name_to_data_lr, name_to_data_plr
+import os
 
 """
 Rank Encoding Functions
@@ -140,6 +142,14 @@ def transform_arrayToAPI(array):
 Evaluation Utils
 """
 
+def load_data(data_name, DATA_DIR="data/"):
+    path = os.path.join(DATA_DIR, f"{data_name}.csv")
+    data = pd.read_csv(path)
+    X = data.drop(columns=data.columns[data.columns.str.contains('L')])
+    y = data[data.columns[data.columns.str.contains('L')]]
+    return X.values, y.values
+    
+
 def get_Buckets_Sizes_Counts(Y):
     unique_rankings, counts = np.unique(Y.astype(int), axis=0, return_counts=True)
     mean_bucket_size = np.sum(
@@ -169,7 +179,12 @@ def build_plottable_evaluationDataFrame(
     model_evaluation_function,
     model_score_function,
     model_names=[""],
+    rank_encoding="dense"
 ):
+    if name_to_data == name_to_data_lr:
+        DATA_DIR = "data/LR_DATA"
+    elif name_to_data == name_to_data_plr:
+        DATA_DIR = "data/PLR_DATA"
     names, data_ids = list(name_to_data.keys()), list(name_to_data.values())
     # data frame later used for prediction
     data = {
@@ -215,10 +230,9 @@ def build_plottable_evaluationDataFrame(
     as_frame = False
     return_X_y = True
 
-    for i in range(len(data_ids)):
-        X, Y = fetch_openml(
-            data_id=data_ids[i], as_frame=as_frame, return_X_y=return_X_y, parser="auto"
-        )
+    for name in names:
+        X,Y = load_data(name, DATA_DIR)
+
         X = np.ascontiguousarray(X)  # need for performance improvement at SVM
         Y = Y.astype(np.float64)
 
@@ -229,14 +243,14 @@ def build_plottable_evaluationDataFrame(
             Y=Y,
             random_state=random_state,
             model_score_function=model_score_function,
-            ranking_encoding="standard"
+            rank_encoding=rank_encoding
         )
 
         # Add regression Outputs
         for index_models in range(results.shape[0]):
             model_accuracies, model_times, model_bucket_sizes = results[index_models].T
             add_to_data(
-                names[i],
+                name,
                 score=model_accuracies,
                 time=model_times,
                 bucket_per_rank=model_bucket_sizes,
@@ -246,7 +260,7 @@ def build_plottable_evaluationDataFrame(
         # add_to_data(names[i], *best_results, algo="Data")
         del results
 
-        print(f"FINISHED DATA_ID: {data_ids[i]}")
+        print(f"FINISHED DATA_ID: {name}")
     return pd.DataFrame(data)
 
 
@@ -337,6 +351,7 @@ def build_plottable_evaluationDataFrame_csvData(
     return pd.DataFrame(data)
 
 
+
 def build_plottable_evaluationDataFrame_missingLabels(
     name_to_data,
     models,
@@ -345,7 +360,13 @@ def build_plottable_evaluationDataFrame_missingLabels(
     model_evaluation_function,
     model_score_function,
     model_names=[""],
+    rank_encoding="dense"
 ):
+    if name_to_data == name_to_data_lr:
+        DATA_DIR = "data/LR_DATA"
+    elif name_to_data == name_to_data_plr:
+        DATA_DIR = "data/PLR_DATA"
+        
     names, data_ids = list(name_to_data.keys()), list(name_to_data.values())
     # data frame later used for prediction
     data = {
@@ -383,10 +404,9 @@ def build_plottable_evaluationDataFrame_missingLabels(
     as_frame = False
     return_X_y = True
 
-    for i in range(len(data_ids)):
-        X, Y = fetch_openml(
-            data_id=data_ids[i], as_frame=as_frame, return_X_y=return_X_y, parser="auto"
-        )
+    for data_name in names:
+        X,Y = load_data(data_name, DATA_DIR)
+         
         X = np.ascontiguousarray(X)  # need for performance improvement at SVM
         Y = Y.astype(np.float64)
 
@@ -398,13 +418,14 @@ def build_plottable_evaluationDataFrame_missingLabels(
             random_state=random_state,
             percentage_missing_labels=percentage,
             model_score_function=model_score_function,
+            rank_encoding=rank_encoding
         )
 
         # Add regression Outputs
         for index_models in range(results.shape[0]):
             model_accuracies, model_times, model_bucket_sizes = results[index_models].T
             add_to_data(
-                names[i],
+                data_name,
                 score=model_accuracies,
                 time=model_times,
                 bucket_per_rank=model_bucket_sizes,
@@ -415,7 +436,7 @@ def build_plottable_evaluationDataFrame_missingLabels(
         # add_to_data(names[i], *best_results, algo="Data")
         del results  # flush memory
 
-        print(f"FINISHED DATA_ID: {data_ids[i]}")
+        print(f"FINISHED DATA_ID: {data_name}")
     return pd.DataFrame(data)
 
 
@@ -563,7 +584,35 @@ def create_missing_labels(Y, percentage, random_state=0):
     temp = temp.reshape(
         shape
     )  # brings back the original Y. Does it holds: Y == Y.flatten().reshape(Y.shape)
-
+    from itertools import combinations
+    for columns in combinations(range(shape[-1]), 2):
+        temp_column = temp[:,columns]
+        f_class = columns[0]
+        s_class = columns[1]
+        y = np.where((temp[:, f_class] == -1) | (temp[:, s_class] == -1), "missing",  # noqa
+                         np.where(temp[:, f_class] < temp[:, s_class], "precedes",  # noqa
+                         np.where(temp[:, f_class] > temp[:, s_class], "succeeds", "tied")))  # noqa
+        mask = y != "missing"
+        if len(np.unique(y[mask]))  < 2:
+            # Introduce at least one more class
+            possible_Y_values = Y[:,columns]
+            if "precedes" in np.unique(y[mask]):
+                additional_condition = possible_Y_values[:,0] > possible_Y_values[:,1]
+            elif "succeeds" in np.unique(y[mask]):
+                additional_condition = possible_Y_values[:,0] < possible_Y_values[:,1]
+            else:
+                raise ValueError("Unknown class relationship")
+            # Gather A relationship not already present
+            possible_Y_values_idx = np.where((possible_Y_values != temp_column) & additional_condition[:,None])[0]
+            # Choice random entry
+            insertion_value = random_generator.choice(
+                possible_Y_values_idx, size=1
+            )
+            # Add entry to the modified column
+            temp_column[insertion_value] = possible_Y_values[insertion_value]
+            temp[:,columns] = temp_column
+    #print("FINAL TEMP HAS PROPORTION:", np.sum(temp == -1) / temp.size)
+    
     return temp
 
 

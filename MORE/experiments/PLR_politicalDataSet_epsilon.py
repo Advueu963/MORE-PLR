@@ -211,6 +211,6 @@ if __name__ == "__main__":
             )
 
     plotData = pd.DataFrame(plotData)
-    plotData.to_csv(DATA_DIR / "PLR_politicalEvaluation_epsilon_dense.csv")
+    plotData.to_csv(DATA_DIR / "PLR_politicalEvaluation_epsilon.csv")
     # file_name = f"benchMarkPolitical_MORE-vs-JC"
     # plot_evaluation_data(plotData,file_name,data_files)

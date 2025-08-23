@@ -41,11 +41,20 @@ from _overlap_intervals import get_overlaps
 """
 
 def predict_raw_interval(estimator, X, q):
+    tree_list = []
+    if isinstance(estimator.estimators_, list):
+        tree_list = estimator.estimators_
+    else:
+        if isinstance(estimator.estimators_, np.ndarray):
+            tree_list = estimator.estimators_.flatten().tolist()
+        else:
+            raise ValueError("Unknown estimator type: {}".format(type(estimator.estimators_)))
+            
     Y_interval = np.zeros((X.shape[0], 2))
 
-    raw_outputs = np.zeros((X.shape[0],len(estimator.estimators_)))
+    raw_outputs = np.zeros((X.shape[0],len(tree_list)))
 
-    for i, e in enumerate(estimator.estimators_):
+    for i, e in enumerate(tree_list):
         raw_outputs[:, i] = e.predict(X)
 
         # Build empirical intervals
@@ -250,6 +259,8 @@ class PLR_RandomForestRegressor(RandomForestRegressor):
 
         return transform_arrayToAPI(y_hat)
 
+    
+    
 class PLR_RandomForestRegressor_Epsilon(PLR_RandomForestRegressor):
 
     def __str__(self):
@@ -910,12 +921,19 @@ class PLR_RegressorChainInterval(PLR_RegressorChain):
                     X_aug = sp.hstack((X, previous_predictions))
             else:
                 X_aug = np.hstack((X, previous_predictions))
-
+                
+            tree_list = []
+            if isinstance(estimator.estimators_, list):
+                tree_list = estimator.estimators_
+            else:
+                if isinstance(estimator.estimators_, np.ndarray):
+                    tree_list = estimator.estimators_.flatten().tolist()
+            
             raw_outputs = np.zeros(
-                (X_aug.shape[0], len(estimator.estimators_)), dtype=np.float64
+                (X_aug.shape[0], len(tree_list)), dtype=np.float64
             )
 
-            for i, e in enumerate(estimator.estimators_):
+            for i, e in enumerate(tree_list):
                 raw_outputs[:, i] = e.predict(X_aug)
 
             Y_pred_chain[:, chain_idx] = np.mean(raw_outputs, axis=-1)
