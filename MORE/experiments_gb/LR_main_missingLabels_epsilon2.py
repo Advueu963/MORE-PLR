@@ -25,14 +25,15 @@ if __name__ == "__main__":
     number = int(os.environ["SLURM_ARRAY_TASK_ID"]) # HPC configuration
     # [0.01, 0.03, 0.05, 0.07, 0.09, 0.12, 0.14, 0.16, 0.18, 0.2]
 
-    DATA_FOLDER = "LR-GBR/missingLabels/lr/epsi"
+    DATA_FOLDER = "LR-GBR/missingLabels/epsi"
 
     random_state = 0
     epsi_missing_pairs = [ (eps, perc, encoding) 
-                          for eps in epsilon_values 
-                          for perc in percentages
-                          for encoding in ["modified","standard","fractional"]]
-    
+                          for eps in [0.2] 
+                          for perc in [0.6]
+                          for encoding in ["fractional","modified","standard"]
+    ]
+
     percentage = epsi_missing_pairs[number][1]
     epsilon_value = epsi_missing_pairs[number][0]
     encoding = epsi_missing_pairs[number][2]

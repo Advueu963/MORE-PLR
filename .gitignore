@@ -8,3 +8,4 @@ __pycache__
 MORE/__pycache__
 cython_debug/
 *.out
+*.cmd

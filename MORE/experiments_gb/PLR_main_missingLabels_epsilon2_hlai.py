@@ -30,7 +30,7 @@ if __name__ == "__main__":
     epsi_missing_pairs = [ (eps, perc, encoding) 
                           for eps in [0.2] 
                           for perc in [0.6]
-                          for encoding in ["dense"]
+                          for encoding in ["standard", "modified", "fractional"]
     ]
 
     percentage = epsi_missing_pairs[number][1]
@@ -69,4 +69,4 @@ if __name__ == "__main__":
         rank_encoding=encoding
     )
 
-    df.to_csv(DATA_DIR / DATA_FOLDER / encoding / f"PLR-{model_name}-{percentage}.csv")
+    df.to_csv(DATA_DIR / DATA_FOLDER / encoding / f"PLR-{model_name}-{percentage}_hlai.csv")

@@ -23,16 +23,16 @@ import os
 if __name__ == "__main__":
     n_jobs = int(os.environ['SLURM_CPUS_PER_TASK'])  # HPC configuration
     number = int(os.environ["SLURM_ARRAY_TASK_ID"]) # HPC configuration
+    # [0.01, 0.03, 0.05, 0.07, 0.09, 0.12, 0.14, 0.16, 0.18, 0.2]
 
-    DATA_FOLDER = "PLR-GBR/missingLabels/epsi"
+    DATA_FOLDER = "LR-GBR/missingLabels/lr/epsi"
 
     random_state = 0
     epsi_missing_pairs = [ (eps, perc, encoding) 
                           for eps in [0.2] 
                           for perc in [0.6]
-                          for encoding in ["dense"]
-    ]
-
+                          for encoding in ["modified","standard","fractional"]]
+    
     percentage = epsi_missing_pairs[number][1]
     epsilon_value = epsi_missing_pairs[number][0]
     encoding = epsi_missing_pairs[number][2]
@@ -55,11 +55,12 @@ if __name__ == "__main__":
         missing_label_strategy="drop_individuals",
     )
 
+
     model = regr_model_chain_epsilon
     model_name = regr_name_chain_gb_Epsi + f"({epsilon_value})"
 
     df = build_plottable_evaluationDataFrame_missingLabels(
-        name_to_data=name_to_data_plr,
+        name_to_data=name_to_data_lr,
         models=[model],
         random_state=random_state,
         percentage=percentage,
@@ -69,4 +70,4 @@ if __name__ == "__main__":
         rank_encoding=encoding
     )
 
-    df.to_csv(DATA_DIR / DATA_FOLDER / encoding / f"PLR-{model_name}-{percentage}.csv")
+    df.to_csv(DATA_DIR / DATA_FOLDER / encoding /  f"LR-{model_name}-{percentage}_hlai.csv")
