@@ -11,6 +11,7 @@
 # Local application
 from .._types cimport BOOL_t, DTYPE_t_1D, INT64_t, INT64_t_2D, SIZE_t
 from .._types cimport RANK_TYPE
+from libc.stdio cimport printf
 
 
 # =============================================================================
@@ -33,7 +34,7 @@ cpdef void kendall_distance_fast(INT64_t_2D Y_true,
 
     for sample in range(n_samples):
         n_ranked_classes = 0
-        for f_class in range(n_classes - 1):
+        for f_class in range(n_classes):
             # Skip non-ranked classes
             if (Y_true[sample, f_class] == RANK_TYPE.RANDOM or
                     Y_pred[sample, f_class] == RANK_TYPE.RANDOM):
@@ -68,7 +69,7 @@ cpdef void tau_score_fast(INT64_t_2D Y_true,
 
     for sample in range(n_samples):
         n_ranked_classes = 0
-        for f_class in range(n_classes - 1):
+        for f_class in range(n_classes):
             # Skip non-ranked classes
             if (Y_true[sample, f_class] == RANK_TYPE.RANDOM or
                     Y_pred[sample, f_class] == RANK_TYPE.RANDOM):
@@ -85,5 +86,4 @@ cpdef void tau_score_fast(INT64_t_2D Y_true,
                     scores[sample] += 1.0
                 else:
                     scores[sample] -= 1.0
-
         scores[sample] /= n_ranked_classes * (n_classes-1) / 2

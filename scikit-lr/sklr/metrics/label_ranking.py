@@ -8,7 +8,6 @@ Functions named as ``*_distance`` return a scalar value to minimize: the lower,
 the better.
 """
 
-
 # =============================================================================
 # Imports
 # =============================================================================
@@ -25,6 +24,7 @@ from ._label_ranking_fast import kendall_distance_fast, tau_score_fast
 # =============================================================================
 # Methods
 # =============================================================================
+
 
 def _check_targets(Y_true, Y_pred):
     """Check that ``Y_true`` and ``Y_pred`` belong to a Label Ranking task.
@@ -44,7 +44,9 @@ def _check_targets(Y_true, Y_pred):
     return (Y_true, Y_pred)
 
 
-def kendall_distance(Y_true, Y_pred, normalize=True, sample_weight=None, return_dists=False):  # noqa
+def kendall_distance(
+    Y_true, Y_pred, normalize=True, sample_weight=None, return_dists=False
+):  # noqa
     """Kendall distance.
 
     The Kendall distance is a metric that counts the number of pairwise
@@ -144,9 +146,13 @@ def tau_score(Y_true, Y_pred, sample_weight=None):
     >>> tau_score(Y_true, Y_pred)
     0.3333333333333333
     """
+    mask = (Y_pred == 0).all(dim=1)
+    if (mask).any():
+        # All zero are considered as the worst ranking to be fair. In general it would simply express abstaining from any prediction at all.
+        Y_pred[mask] = Y_true[mask].flip(dims=[1])
     (Y_true, Y_pred) = _check_targets(Y_true, Y_pred)
-
+    # print("Y_TRUE: ", Y_true)
+    # print("Y_PRED: ", Y_pred)
     scores = np.zeros(Y_true.shape[0], dtype=np.float64)
     tau_score_fast(Y_true, Y_pred, scores)
-
     return np.average(a=scores, weights=sample_weight)

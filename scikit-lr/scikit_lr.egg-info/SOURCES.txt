@@ -5,10 +5,8 @@ README.md
 pyproject.toml
 setup.cfg
 setup.py
-docs/.DS_Store
 docs/Makefile
 docs/README.md
-docs/source/.DS_Store
 docs/source/about.rst
 docs/source/conf.py
 docs/source/glossary.rst
